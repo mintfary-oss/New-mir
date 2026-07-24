@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New-mir — Neural Code Engine</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --orange: #f0883e;
+      --red: #f85149;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.4rem; color: var(--accent); }
+    header span { color: var(--muted); font-size: 0.9rem; }
+    nav { display: flex; gap: 8px; margin-left: auto; }
+    nav button { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: border-color .2s; }
+    nav button.active, nav button:hover { border-color: var(--accent); color: var(--accent); }
+    main { max-width: 960px; margin: 32px auto; padding: 0 24px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 20px; }
+    h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--accent); }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    textarea, input[type=text], input[type=number], select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 0.9rem; resize: vertical;
+    }
+    textarea { min-height: 120px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .row > * { flex: 1; min-width: 160px; }
+    button.btn {
+      background: var(--accent); color: #0d1117; border: none; padding: 10px 20px;
+      border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
+      transition: opacity .2s;
+    }
+    button.btn:hover { opacity: .85; }
+    button.btn:disabled { opacity: .4; cursor: not-allowed; }
+    .result { margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 360px; overflow-y: auto; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+    .tag-green { background: rgba(63,185,80,.2); color: var(--green); }
+    .tag-blue { background: rgba(88,166,255,.2); color: var(--accent); }
+    .tag-orange { background: rgba(240,136,62,.2); color: var(--orange); }
+    .stat-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; }
+    .stat { text-align: center; }
+    .stat .val { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+    .stat .lbl { font-size: 0.75rem; color: var(--muted); }
+    #qr-img { max-width: 200px; image-rendering: pixelated; border: 4px solid white; margin-top: 12px; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-left: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: border-color .2s; color: var(--muted); }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--accent); color: var(--accent); }
+    .drop-zone input { display: none; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>⬡ New-mir</h1>
+  <span>Neural Code Engine · Honeycomb Architecture</span>
+  <nav>
+    <button class="active" onclick="switchPanel('generate')">Code Gen</button>
+    <button onclick="switchPanel('convert')">Convert</button>
+    <button onclick="switchPanel('compress')">Compress</button>
+    <button onclick="switchPanel('qr')">QR Encode</button>
+    <button onclick="switchPanel('memory')">Memory</button>
+  </nav>
+</header>
+
+<main>
+
+<!-- ======================== CODE GENERATION ======================== -->
+<div id="panel-generate" class="panel active">
+  <div class="card">
+    <h2>Neural Code Generation</h2>
+    <div class="row">
+      <div>
+        <label>Mode</label>
+        <select id="gen-mode">
+          <option value="prompt">Prompt (code prefix)</option>
+          <option value="description">Description (natural language)</option>
+        </select>
+      </div>
+      <div>
+        <label>Language</label>
+        <select id="gen-lang">
+          <option value="python">Python</option>
+          <option value="javascript">JavaScript</option>
+          <option value="typescript">TypeScript</option>
+          <option value="go">Go</option>
+          <option value="rust">Rust</option>
+          <option value="bash">Bash</option>
+        </select>
+      </div>
+      <div>
+        <label>Max tokens</label>
+        <input type="number" id="gen-tokens" value="256" min="16" max="1024">
+      </div>
+      <div>
+        <label>Temperature</label>
+        <input type="number" id="gen-temp" value="0.8" min="0" max="2" step="0.1">
+      </div>
+    </div>
+    <label>Prompt / Description</label>
+    <textarea id="gen-prompt" placeholder="def fibonacci(n):"></textarea>
+    <br>
+    <button class="btn" onclick="generateCode()">Generate ▶</button>
+    <div id="gen-result" class="result" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ======================== FILE CONVERT ======================== -->
+<div id="panel-convert" class="panel">
+  <div class="card">
+    <h2>Convert Any File → Binary (0/1)</h2>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" onchange="handleFileSelect(this)">
+      <div>Drop any file here or click to upload</div>
+      <div style="font-size:.8rem;margin-top:4px">Text · PDF · DOCX · Images · Audio · Video · Code · …</div>
+    </div>
+    <div id="conv-result" class="result" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ======================== COMPRESS ======================== -->
+<div id="panel-compress" class="panel">
+  <div class="card">
+    <h2>Compress Text → Binary Stream</h2>
+    <div class="row">
+      <div>
+        <label>Hint</label>
+        <select id="comp-hint">
+          <option value="auto">Auto</option>
+          <option value="text">Text</option>
+          <option value="binary">Binary</option>
+        </select>
+      </div>
+    </div>
+    <label>Content</label>
+    <textarea id="comp-text" placeholder="Paste any text or code…"></textarea>
+    <br>
+    <button class="btn" onclick="compressText()">Compress ▶</button>
+    <div id="comp-result" class="result" style="display:none"></div>
+  </div>
+  <div class="card">
+    <h2>Compression Ratio Estimate</h2>
+    <textarea id="est-text" placeholder="Paste sample text…"></textarea>
+    <br>
+    <button class="btn" onclick="estimateRatio()">Estimate ▶</button>
+    <div id="est-result" class="result" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ======================== QR ENCODE ======================== -->
+<div id="panel-qr" class="panel">
+  <div class="card">
+    <h2>QR-Code Binary Encoder (Layer 2)</h2>
+    <label>Text to encode</label>
+    <textarea id="qr-text" placeholder="Hello, New-mir!"></textarea>
+    <br>
+    <button class="btn" onclick="encodeQR()">Encode to QR ▶</button>
+    <div id="qr-result" class="result" style="display:none"></div>
+    <img id="qr-img" style="display:none" alt="QR code">
+  </div>
+</div>
+
+<!-- ======================== MEMORY ======================== -->
+<div id="panel-memory" class="panel">
+  <div class="card">
+    <h2>HoneycombMemory Stats (Layer 1)</h2>
+    <button class="btn" onclick="loadMemoryStats()">Refresh ▶</button>
+    <div id="mem-stats" class="stat-row" style="margin-top:16px"></div>
+    <div id="mem-cells" class="result" style="display:none;margin-top:12px"></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+function switchPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function showResult(id, content) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+}
+
+async function apiFetch(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ detail: r.statusText }));
+    throw new Error(err.detail || r.statusText);
+  }
+  return r.json();
+}
+
+async function generateCode() {
+  const btn = event.target;
+  btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('prompt', document.getElementById('gen-prompt').value);
+    fd.append('language', document.getElementById('gen-lang').value);
+    fd.append('max_new_tokens', document.getElementById('gen-tokens').value);
+    fd.append('temperature', document.getElementById('gen-temp').value);
+    fd.append('description_mode', document.getElementById('gen-mode').value === 'description');
+    const data = await apiFetch('/api/generate', { method: 'POST', body: fd });
+    showResult('gen-result', data.generated);
+  } catch(e) { showResult('gen-result', 'Error: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+async function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  showResult('conv-result', 'Converting…');
+  try {
+    const data = await apiFetch('/api/convert', { method: 'POST', body: fd });
+    showResult('conv-result', data);
+  } catch(e) { showResult('conv-result', 'Error: ' + e.message); }
+}
+
+async function compressText() {
+  const btn = event.target; btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('text', document.getElementById('comp-text').value);
+    fd.append('hint', document.getElementById('comp-hint').value);
+    const data = await apiFetch('/api/compress', { method: 'POST', body: fd });
+    showResult('comp-result', data);
+  } catch(e) { showResult('comp-result', 'Error: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+async function estimateRatio() {
+  const btn = event.target; btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('text', document.getElementById('est-text').value);
+    const data = await apiFetch('/api/compression/estimate', { method: 'POST', body: fd });
+    showResult('est-result', data);
+  } catch(e) { showResult('est-result', 'Error: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+async function encodeQR() {
+  const btn = event.target; btn.disabled = true;
+  const img = document.getElementById('qr-img');
+  img.style.display = 'none';
+  try {
+    const fd = new FormData();
+    fd.append('text', document.getElementById('qr-text').value);
+    const data = await apiFetch('/api/encode-qr', { method: 'POST', body: fd });
+    showResult('qr-result', { slot_ids: data.slot_ids, total_qr_slots: data.total_qr_slots });
+    if (data.qr_png_base64) {
+      img.src = 'data:image/png;base64,' + data.qr_png_base64;
+      img.style.display = 'block';
+    }
+  } catch(e) { showResult('qr-result', 'Error: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+async function loadMemoryStats() {
+  try {
+    const data = await apiFetch('/api/memory/stats');
+    const container = document.getElementById('mem-stats');
+    container.innerHTML = [
+      ['cells_in_memory', 'Cells in RAM'],
+      ['capacity', 'Capacity'],
+      ['total_payload_bytes', 'Payload Bytes'],
+      ['active_cells', 'Active Cells'],
+    ].map(([k, l]) => `
+      <div class="stat">
+        <div class="val">${(data[k]||0).toLocaleString()}</div>
+        <div class="lbl">${l}</div>
+      </div>
+    `).join('');
+    const cells = document.getElementById('mem-cells');
+    cells.style.display = 'block';
+    cells.textContent = 'Recent cells:\n' + (data.recent_cell_ids || []).join('\n');
+  } catch(e) { document.getElementById('mem-stats').innerHTML = 'Error: ' + e.message; }
+}
+
+// Drag & drop
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const inp = document.getElementById('file-input');
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  inp.files = dt.files;
+  handleFileSelect(inp);
+});
+</script>
+</body>
+</html>

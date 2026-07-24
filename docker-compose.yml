@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  new-mir:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: new-mir:latest
+    container_name: new-mir
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      NEW_MIR_HOST: "0.0.0.0"
+      NEW_MIR_PORT: "8000"
+      NEW_MIR_LOG_LEVEL: "info"
+    # Limit to 50% of 2 CPUs and 2 GB RAM — safe for any hardware
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "2g"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    volumes:
+      # Persist memory cell snapshots between container restarts
+      - new_mir_data:/app/data
+
+volumes:
+  new_mir_data:
