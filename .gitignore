@@ -31,10 +31,13 @@ Thumbs.db
 logs/
 
 # Data / model snapshots (too large for git)
-data/
 *.pkl
-*.npz
 *.npy
+# Ignore downloaded/generated data but track seed corpus and stats
+data/models/
+data/downloads/
+data/cache/
+# data/seed/ and data/training_stats.json are tracked (they're small and essential)
 
 # Docker
 .docker/

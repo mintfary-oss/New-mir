@@ -39,10 +39,13 @@ TrainingSession — tracks one full training run
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from pathlib import Path
 
 from core.binary_engine import BinaryCompressionEngine
 from core.cell_memory import HoneycombMemory, MemoryCell
@@ -50,6 +53,44 @@ from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
 
 logger = logging.getLogger("new-mir.trainer")
+
+# Path to the persistent training stats file (relative to repo root)
+_STATS_FILE = Path(__file__).parent.parent / "data" / "training_stats.json"
+
+
+def _load_persistent_stats() -> dict[str, object]:
+    """Load the persistent stats JSON, returning defaults if missing."""
+    try:
+        if _STATS_FILE.exists():
+            with _STATS_FILE.open(encoding="utf-8") as fh:
+                return json.load(fh)
+    except Exception:  # noqa: BLE001
+        pass
+    return {
+        "sessions": [],
+        "total_files_ever": 0,
+        "total_cells_ever": 0,
+        "seed_loaded": False,
+        "seed_loaded_at": None,
+    }
+
+
+def _save_persistent_stats(stats: dict[str, object]) -> None:
+    """Persist the stats JSON to disk, silently ignoring errors."""
+    try:
+        _STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with _STATS_FILE.open("w", encoding="utf-8") as fh:
+            json.dump(stats, fh, indent=2, ensure_ascii=False)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Could not save training_stats.json: %s", exc)
+
+
+def mark_seed_loaded() -> None:
+    """Record that seed data was loaded on startup."""
+    stats = _load_persistent_stats()
+    stats["seed_loaded"] = True
+    stats["seed_loaded_at"] = datetime.now(tz=timezone.utc).isoformat()
+    _save_persistent_stats(stats)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -178,6 +219,10 @@ class HoneycombTrainer:
             len(session.cells_written),
             session.duration_s,
         )
+
+        # Persist stats to data/training_stats.json
+        self._persist_session(session)
+
         return session
 
     def global_stats(self) -> dict[str, object]:
@@ -298,6 +343,31 @@ class HoneycombTrainer:
             f"{filename}:{len(self._shards)}:{shard.size}".encode()
         ).hexdigest()
         return shard.create_cell(seed=seed)
+
+    def _persist_session(self, session: TrainingSession) -> None:
+        """Append session summary to the persistent training_stats.json file."""
+        stats = _load_persistent_stats()
+        entry = {
+            "session_id": session.session_id,
+            "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+            "files_trained": len(session.accepted_files),
+            "cells_written": len(session.cells_written),
+            "shards_created": session.shards_created,
+            "duration_s": round(session.duration_s, 3),
+            "fill_percent": self.global_stats().get("fill_percent", 0),
+            "total_cells": self.global_stats().get("total_cells", 0),
+            "shards": self.global_stats().get("shards", 1),
+        }
+        sessions = stats.get("sessions", [])
+        if not isinstance(sessions, list):
+            sessions = []
+        sessions.append(entry)
+        stats["sessions"] = sessions
+        prev_files = stats.get("total_files_ever", 0)
+        prev_cells = stats.get("total_cells_ever", 0)
+        stats["total_files_ever"] = (int(prev_files) if isinstance(prev_files, (int, float, str)) else 0) + len(session.accepted_files)
+        stats["total_cells_ever"] = (int(prev_cells) if isinstance(prev_cells, (int, float, str)) else 0) + len(session.cells_written)
+        _save_persistent_stats(stats)
 
     def _active_shard(self, session: TrainingSession) -> HoneycombMemory:
         """Return the current shard; create a new one if ≥ 70 % full."""

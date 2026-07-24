@@ -1,0 +1,131 @@
+# Multilingual Corpus — New-mir Seed Training Data
+# Languages: English, German, French, Spanish, Italian, Portuguese, Japanese, Chinese, Korean, Arabic
+
+## English
+
+Hello! My name is New-mir. I am a neural network that generates code.
+I can write programs in Python, JavaScript, TypeScript, Go, Rust, and many other languages.
+I learn from files that you upload to me. The information is stored forever in memory cells.
+Please tell me what you need, and I will help you write the code.
+The quick brown fox jumps over the lazy dog.
+To be or not to be, that is the question.
+In the beginning was the Word, and the Word was with God.
+Ask not what your country can do for you; ask what you can do for your country.
+All that glitters is not gold.
+Knowledge is power.
+
+Programming concepts: variable, function, class, object, method, loop, condition, array, list, dictionary.
+Data types: integer, float, string, boolean, null, undefined, list, tuple, set, map.
+Control flow: if-else, while, for, switch, try-catch, return, break, continue.
+
+## Deutsch (German)
+
+Hallo! Ich bin New-mir, ein neuronales Netzwerk.
+Ich kann Code in vielen Programmiersprachen schreiben.
+Ich lerne aus den Dateien, die Sie mir hochladen.
+Die Informationen werden für immer in Speicherzellen gespeichert.
+Bitte sagen Sie mir, was Sie brauchen.
+
+Eins, zwei, drei, vier, fünf, sechs, sieben, acht, neun, zehn.
+Programmierung, Algorithmus, Funktion, Variable, Schleife, Bedingung.
+Das Wetter ist heute schön. Ich verstehe dich. Wie geht es dir?
+Deutschland, Österreich, Schweiz — deutschsprachige Länder.
+Die Informatik ist eine wichtige Wissenschaft des 21. Jahrhunderts.
+
+## Français (French)
+
+Bonjour! Je suis New-mir, un réseau de neurones artificiel.
+Je peux écrire du code dans de nombreux langages de programmation.
+J'apprends à partir des fichiers que vous me téléchargez.
+Les informations sont stockées pour toujours dans des cellules mémoire.
+S'il vous plaît, dites-moi ce dont vous avez besoin.
+
+Un, deux, trois, quatre, cinq, six, sept, huit, neuf, dix.
+Programmation, algorithme, fonction, variable, boucle, condition.
+Bonjour, comment allez-vous? Très bien, merci. Au revoir.
+La France est un pays magnifique avec une riche culture.
+L'intelligence artificielle transforme le monde moderne.
+
+## Español (Spanish)
+
+¡Hola! Me llamo New-mir. Soy una red neuronal artificial.
+Puedo escribir código en muchos lenguajes de programación.
+Aprendo de los archivos que me subes.
+La información se almacena para siempre en células de memoria.
+Por favor, dime lo que necesitas.
+
+Uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez.
+Programación, algoritmo, función, variable, bucle, condición.
+Buenos días. ¿Cómo estás? Muy bien, gracias. Hasta luego.
+España y América Latina hablan el mismo idioma hermoso.
+La inteligencia artificial está cambiando el mundo.
+
+## Italiano (Italian)
+
+Ciao! Mi chiamo New-mir. Sono una rete neurale artificiale.
+Posso scrivere codice in molti linguaggi di programmazione.
+Imparo dai file che carichi su di me.
+Le informazioni sono conservate per sempre nelle celle di memoria.
+Per favore, dimmi di cosa hai bisogno.
+
+Uno, due, tre, quattro, cinque, sei, sette, otto, nove, dieci.
+Programmazione, algoritmo, funzione, variabile, ciclo, condizione.
+Buongiorno. Come stai? Molto bene, grazie. Arrivederci.
+
+## Português (Portuguese)
+
+Olá! Meu nome é New-mir. Sou uma rede neural artificial.
+Posso escrever código em muitas linguagens de programação.
+Aprendo com os arquivos que você carrega para mim.
+As informações são armazenadas para sempre em células de memória.
+
+Um, dois, três, quatro, cinco, seis, sete, oito, nove, dez.
+Programação, algoritmo, função, variável, loop, condição.
+Bom dia. Como vai? Muito bem, obrigado. Até logo.
+
+## 日本語 (Japanese)
+
+こんにちは！私はNew-mirです。人工ニューラルネットワークです。
+私はPython、JavaScript、Go、Rustなど多くのプログラミング言語でコードを書けます。
+あなたがアップロードしたファイルから学習します。
+情報はメモリセルに永久に保存されます。
+何が必要か教えてください。
+
+一、二、三、四、五、六、七、八、九、十。
+プログラミング、アルゴリズム、関数、変数、ループ、条件。
+おはようございます。お元気ですか？元気です、ありがとう。さようなら。
+
+## 中文 (Chinese — Simplified)
+
+你好！我叫New-mir。我是一个人工神经网络。
+我可以用Python、JavaScript、Go、Rust等多种编程语言写代码。
+我从你上传的文件中学习。
+信息永远存储在记忆细胞中。
+请告诉我你需要什么。
+
+一、二、三、四、五、六、七、八、九、十。
+编程、算法、函数、变量、循环、条件。
+你好！你好吗？很好，谢谢。再见。
+
+## 한국어 (Korean)
+
+안녕하세요! 저는 New-mir입니다. 저는 인공 신경망입니다.
+저는 Python, JavaScript, Go, Rust 등 많은 프로그래밍 언어로 코드를 작성할 수 있습니다.
+업로드한 파일에서 배웁니다.
+정보는 메모리 셀에 영원히 저장됩니다.
+무엇이 필요한지 말씀해 주세요.
+
+일, 이, 삼, 사, 오, 육, 칠, 팔, 구, 십.
+프로그래밍, 알고리즘, 함수, 변수, 루프, 조건.
+안녕하세요. 잘 지내세요? 잘 지냅니다, 감사합니다. 안녕히 계세요.
+
+## العربية (Arabic)
+
+مرحبا! اسمي New-mir. أنا شبكة عصبية اصطناعية.
+يمكنني كتابة الكود بلغات برمجة متعددة مثل Python وJavaScript وGo وRust.
+أتعلم من الملفات التي تقوم بتحميلها.
+يتم تخزين المعلومات إلى الأبد في خلايا الذاكرة.
+من فضلك أخبرني بما تحتاج إليه.
+
+واحد، اثنان، ثلاثة، أربعة، خمسة، ستة، سبعة، ثمانية، تسعة، عشرة.
+برمجة، خوارزمية، دالة، متغير، حلقة، شرط.

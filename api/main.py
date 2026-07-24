@@ -63,6 +63,7 @@ from core.chat_engine import ChatEngine
 from core.gpt2_backend import GPT2Backend
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
+from core.seed_trainer import run_seed_training
 from core.trainer import HoneycombTrainer
 
 # ---------------------------------------------------------------------------
@@ -132,6 +133,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     _chat_engine = ChatEngine(neural_gen=chat_model)
     logger.info("HoneycombTrainer and ChatEngine ready.")
+
+    # Run seed training (Russian, Rust, multilingual, Python examples) on first startup
+    try:
+        await loop.run_in_executor(None, run_seed_training, _trainer)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Seed training skipped due to error: %s", exc)
+
     yield
     logger.info("New-mir shutting down.")
 
@@ -193,6 +201,25 @@ async def health() -> dict[str, Any]:
         "chat_model_params": _gpt2_gen.parameter_count,
         "chat_model_loaded": _gpt2_gen.weights is not None,
         "trainer": trainer_stats,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Quick stats for the UI header (cell count, shard info)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/stats", tags=["System"])
+async def quick_stats() -> dict[str, Any]:
+    """Lightweight stats used by the UI header to show live cell count."""
+    trainer_stats = _trainer.global_stats() if _trainer else {}
+    return {
+        "total_cells": trainer_stats.get("total_cells", _memory.size),
+        "total_capacity": trainer_stats.get("total_capacity", _memory.capacity),
+        "fill_percent": trainer_stats.get("fill_percent", 0.0),
+        "shards": trainer_stats.get("shards", 1),
+        "qr_slots": trainer_stats.get("qr_slots", _qr_encoder.slot_count),
+        "chat_model": _gpt2_gen.model_name,
     }
 
 
@@ -447,6 +474,61 @@ async def training_stats() -> dict[str, Any]:
     if _trainer is None:
         return {"error": "Trainer not initialised"}
     return _trainer.global_stats()
+
+
+@app.post("/api/train/fetch-web", tags=["Training"])
+async def train_from_web(
+    url: str = Form(...),
+) -> JSONResponse:
+    """
+    Download a raw text/code file from a public URL and train on it.
+
+    Intended for public GitHub raw files, plain-text datasets, and similar.
+    Supports URLs that return ``text/*`` or ``application/json`` content types.
+    The raw bytes are forwarded to the standard training pipeline.
+
+    Parameters
+    ----------
+    url : str
+        A public HTTP(S) URL returning text or code content.
+    """
+    if _trainer is None:
+        raise HTTPException(status_code=503, detail="Trainer not initialised")
+
+    import urllib.error
+    import urllib.request
+
+    # Validate URL scheme
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Only http:// and https:// URLs are supported")
+
+    loop = asyncio.get_event_loop()
+
+    def _fetch() -> tuple[str, bytes]:
+        req = urllib.request.Request(url, headers={"User-Agent": "New-mir/1.1"})
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+            content_type = resp.headers.get("Content-Type", "text/plain")
+            raw = resp.read(10 * 1024 * 1024)  # max 10 MB
+        # Derive a filename from the URL
+        filename = url.rstrip("/").split("/")[-1] or "fetched_content"
+        if "." not in filename:
+            if "json" in content_type:
+                filename += ".json"
+            else:
+                filename += ".txt"
+        return filename, raw
+
+    try:
+        filename, raw = await loop.run_in_executor(None, _fetch)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"Fetch failed: {exc}") from exc
+
+    session = await loop.run_in_executor(
+        None,
+        _trainer.train_files,
+        [(filename, raw)],
+    )
+    return JSONResponse(content=session.to_dict())
 
 
 # ---------------------------------------------------------------------------
