@@ -38,10 +38,7 @@ import uuid
 from collections.abc import Generator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from core.neural_core import NeuralCodeGen
+from typing import Any
 
 logger = logging.getLogger("new-mir.chat")
 
@@ -148,7 +145,7 @@ class ChatEngine:
         The shared code-generation model.
     """
 
-    def __init__(self, neural_gen: NeuralCodeGen) -> None:
+    def __init__(self, neural_gen: Any) -> None:
         self._gen = neural_gen
         self._sessions: dict[str, ChatSession] = {}
         self._lock = threading.Lock()
