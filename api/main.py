@@ -16,15 +16,15 @@ GET  /api/memory/stats          → HoneycombMemory pool statistics
 GET  /api/compression/estimate  → Compression ratio estimate for sample data
 POST /api/train                 → Train model on one or more uploaded files
 GET  /api/train/stats           → Global training / memory stats
+POST /api/chat/session          → Create a new chat session
+POST /api/chat/{session_id}     → Send message, stream SSE response
+GET  /api/chat/continue/{id}    → Continue a paused session (SSE)
+POST /api/chat/stop/{id}        → Stop / pause a running session
+GET  /api/chat/sessions         → List all active sessions
+GET  /api/chat/session/{id}     → Get session info + history
 
 All endpoints return JSON unless noted otherwise.  File upload endpoints
-accept multipart/form-data.
-
-Performance
------------
-Workers are set to `min(4, cpu_count)` in the Docker entrypoint.
-Heavy CPU work (forward pass, QR encode) is offloaded to a thread-pool
-executor so the event loop stays responsive.
+accept multipart/form-data.  Chat streaming endpoints use text/event-stream.
 """
 
 from __future__ import annotations
@@ -33,18 +33,19 @@ import asyncio
 import base64
 import logging
 import os
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Iterator
 from contextlib import asynccontextmanager
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from api.converters import convert_to_binary
 from core.binary_engine import BinaryCompressionEngine
 from core.cell_memory import HoneycombMemory
+from core.chat_engine import ChatEngine
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
 from core.trainer import HoneycombTrainer
@@ -69,12 +70,13 @@ _qr_encoder = QRBinaryEncoder()
 _compression_engine = BinaryCompressionEngine()
 _neural_gen = NeuralCodeGen()
 _trainer: HoneycombTrainer | None = None
+_chat_engine: ChatEngine | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup / shutdown logic."""
-    global _trainer
+    global _trainer, _chat_engine
     logger.info("Starting New-mir …")
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _neural_gen.load_demo_weights)
@@ -87,7 +89,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         compression_engine=_compression_engine,
         neural_gen=_neural_gen,
     )
-    logger.info("HoneycombTrainer ready.")
+    _chat_engine = ChatEngine(neural_gen=_neural_gen)
+    logger.info("HoneycombTrainer and ChatEngine ready.")
     yield
     logger.info("New-mir shutting down.")
 
@@ -454,6 +457,145 @@ def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
         workers=workers,
         log_level="info",
     )
+
+
+# ---------------------------------------------------------------------------
+# Chat — SSE streaming dialogue
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/chat/session", tags=["Chat"])
+async def create_chat_session() -> dict[str, Any]:
+    """Create a new chat session and return its ID."""
+    if _chat_engine is None:
+        raise HTTPException(status_code=503, detail="Chat engine not ready")
+    session = _chat_engine.new_session()
+    return session.to_dict()
+
+
+@app.post("/api/chat/{session_id}", tags=["Chat"])
+async def chat_send(
+    session_id: str,
+    message: str = Form(...),
+    max_tokens: int = Form(default=4096),
+    temperature: float = Form(default=0.85),
+) -> StreamingResponse:
+    """
+    Send a message and receive the response as a Server-Sent Events stream.
+
+    The stream emits JSON lines::
+
+        data: {"type": "token",  "text": "...", "done": false}
+        data: {"type": "paused", "text": "",    "done": false}
+        data: {"type": "done",   "text": "",    "done": true}
+        data: {"type": "error",  "text": "...", "done": true}
+
+    Generation is **unbounded** — the model keeps writing until the task
+    is complete or the user calls ``POST /api/chat/stop/{session_id}``.
+    """
+    if _chat_engine is None:
+        raise HTTPException(status_code=503, detail="Chat engine not ready")
+
+    session = _chat_engine.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+
+    loop = asyncio.get_event_loop()
+
+    def _sync_gen() -> Iterator[str]:
+        yield from _chat_engine.generate_stream(  # type: ignore[union-attr]
+            session_id=session_id,
+            user_message=message,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+    async def _async_gen() -> AsyncGenerator[str, None]:
+        for chunk in await loop.run_in_executor(None, list, _sync_gen()):
+            yield chunk
+
+    return StreamingResponse(
+        _async_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.get("/api/chat/continue/{session_id}", tags=["Chat"])
+async def chat_continue(
+    session_id: str,
+    max_tokens: int = 4096,
+    temperature: float = 0.85,
+) -> StreamingResponse:
+    """
+    Resume a PAUSED session from where it stopped.
+
+    Returns the same SSE stream format as the send endpoint.
+    """
+    if _chat_engine is None:
+        raise HTTPException(status_code=503, detail="Chat engine not ready")
+
+    loop = asyncio.get_event_loop()
+
+    def _sync_gen() -> Iterator[str]:
+        yield from _chat_engine.continue_stream(  # type: ignore[union-attr]
+            session_id=session_id,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+    async def _async_gen() -> AsyncGenerator[str, None]:
+        for chunk in await loop.run_in_executor(None, list, _sync_gen()):
+            yield chunk
+
+    return StreamingResponse(
+        _async_gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/api/chat/stop/{session_id}", tags=["Chat"])
+async def chat_stop(session_id: str) -> dict[str, Any]:
+    """Signal the running generator to pause.  State becomes PAUSED."""
+    if _chat_engine is None:
+        raise HTTPException(status_code=503, detail="Chat engine not ready")
+    ok = _chat_engine.stop_session(session_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+    return {"session_id": session_id, "action": "stop_requested"}
+
+
+@app.get("/api/chat/sessions", tags=["Chat"])
+async def list_chat_sessions() -> dict[str, Any]:
+    """List all active chat sessions."""
+    if _chat_engine is None:
+        return {"sessions": []}
+    return {"sessions": _chat_engine.list_sessions()}
+
+
+@app.get("/api/chat/session/{session_id}", tags=["Chat"])
+async def get_chat_session(session_id: str) -> dict[str, Any]:
+    """Return session metadata and conversation history."""
+    if _chat_engine is None:
+        raise HTTPException(status_code=503, detail="Chat engine not ready")
+    session = _chat_engine.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail=f"Session not found: {session_id}")
+    info = session.to_dict()
+    info["history"] = [m.to_dict() for m in session.history]
+    return info
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 
 
 if __name__ == "__main__":

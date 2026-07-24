@@ -88,6 +88,38 @@
     .file-result .fr-val { color: var(--text); }
     .shard-notice { background: rgba(240,136,62,.12); border: 1px solid var(--orange); border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 0.82rem; color: var(--orange); }
     .err-notice { background: rgba(248,81,73,.1); border: 1px solid var(--red); border-radius: 6px; padding: 10px 14px; margin-top: 8px; font-size: 0.8rem; color: var(--red); }
+
+    /* ── Chat ── */
+    #panel-chat { display: none; flex-direction: column; height: calc(100vh - 120px); }
+    #panel-chat.active { display: flex; }
+    .chat-wrap { display: flex; flex-direction: column; height: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .chat-toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap; }
+    .chat-toolbar h2 { font-size: 0.95rem; margin: 0; color: var(--purple); flex: 1; }
+    .chat-state { font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+    .chat-state.running { background: rgba(63,185,80,.2); color: var(--green); }
+    .chat-state.paused  { background: rgba(240,136,62,.2); color: var(--orange); }
+    .chat-state.idle    { background: rgba(139,148,158,.15); color: var(--muted); }
+    .chat-state.done    { background: rgba(88,166,255,.15); color: var(--accent); }
+    .chat-state.error   { background: rgba(248,81,73,.2); color: var(--red); }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+    .msg { max-width: 88%; display: flex; flex-direction: column; gap: 4px; }
+    .msg.user { align-self: flex-end; align-items: flex-end; }
+    .msg.assistant { align-self: flex-start; align-items: flex-start; }
+    .msg-role { font-size: 0.72rem; color: var(--muted); }
+    .msg-bubble { padding: 10px 14px; border-radius: 10px; font-size: 0.88rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+    .msg.user .msg-bubble { background: rgba(88,166,255,.18); border: 1px solid rgba(88,166,255,.3); color: var(--text); border-radius: 10px 10px 2px 10px; }
+    .msg.assistant .msg-bubble { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 10px 10px 10px 2px; font-family: monospace; }
+    .msg.assistant .msg-bubble.streaming::after { content: '▌'; color: var(--green); animation: blink .8s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .chat-input-area { border-top: 1px solid var(--border); padding: 12px 14px; background: var(--surface); }
+    .chat-input-row { display: flex; gap: 8px; align-items: flex-end; }
+    #chat-input { flex: 1; resize: none; min-height: 44px; max-height: 200px; overflow-y: auto; font-family: 'Segoe UI', system-ui, sans-serif; font-size: 0.9rem; padding: 10px 12px; }
+    .chat-btns { display: flex; gap: 6px; align-items: flex-end; flex-wrap: nowrap; }
+    .chat-btns button { white-space: nowrap; padding: 9px 14px; font-size: 0.82rem; }
+    .btn-stop { background: var(--red) !important; }
+    .btn-cont { background: var(--orange) !important; }
+    .btn-new  { background: transparent !important; border: 1px solid var(--border) !important; color: var(--muted) !important; }
+    .btn-new:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
   </style>
 </head>
 <body>
@@ -95,6 +127,7 @@
   <h1>⬡ New-mir</h1>
   <span>Neural Code Engine · Honeycomb Architecture</span>
   <nav>
+    <button onclick="switchPanel('chat')" style="border-color:var(--purple);color:var(--purple)">💬 Чат</button>
     <button onclick="switchPanel('train')" class="train-btn">⬡ Обучение</button>
     <button class="active" onclick="switchPanel('generate')">Code Gen</button>
     <button onclick="switchPanel('convert')">Convert</button>
@@ -105,6 +138,49 @@
 </header>
 
 <main>
+
+<!-- ======================== CHAT ======================== -->
+<div id="panel-chat" class="panel">
+  <div class="chat-wrap">
+
+    <!-- Toolbar -->
+    <div class="chat-toolbar">
+      <h2>💬 Диалог с New-mir</h2>
+      <span id="chat-state-badge" class="chat-state idle">ожидание</span>
+      <button class="btn btn-new" onclick="chatNew()" title="Новый диалог">+ Новый</button>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg assistant">
+        <span class="msg-role">New-mir</span>
+        <div class="msg-bubble">
+Привет! Я New-mir — нейросеть для написания кода, книг, статей и всего что угодно.<br><br>
+Напиши задачу — я начну выполнять её и буду писать столько, сколько нужно.<br>
+Нажми <strong>Стоп</strong> чтобы прервать, <strong>Продолжить</strong> чтобы возобновить.
+        </div>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea id="chat-input"
+          placeholder="Напиши задачу… (Enter — отправить, Shift+Enter — перенос строки)"
+          rows="2"></textarea>
+        <div class="chat-btns">
+          <button class="btn" id="chat-send-btn" onclick="chatSend()">Отправить</button>
+          <button class="btn btn-stop" id="chat-stop-btn" onclick="chatStop()" disabled>Стоп</button>
+          <button class="btn btn-cont" id="chat-cont-btn" onclick="chatContinue()" disabled>Продолжить</button>
+        </div>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:6px">
+        Генерация бесконечная — нейросеть пишет до полного завершения задачи
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ======================== TRAIN ======================== -->
 <div id="panel-train" class="panel">
@@ -296,7 +372,185 @@
 </main>
 
 <script>
-// ─── State ───────────────────────────────────────────────────────────────────
+// ─── Chat State ───────────────────────────────────────────────────────────────
+let chatSessionId = null;
+let chatState = 'idle';   // idle | running | paused | done | error
+let currentBubble = null; // DOM element being streamed into
+
+// ─── Chat helpers ─────────────────────────────────────────────────────────────
+function chatSetState(state) {
+  chatState = state;
+  const badge = document.getElementById('chat-state-badge');
+  const labels = { idle:'ожидание', running:'генерация…', paused:'на паузе', done:'готово', error:'ошибка' };
+  badge.textContent = labels[state] || state;
+  badge.className = 'chat-state ' + state;
+
+  const sendBtn = document.getElementById('chat-send-btn');
+  const stopBtn = document.getElementById('chat-stop-btn');
+  const contBtn = document.getElementById('chat-cont-btn');
+  const input   = document.getElementById('chat-input');
+
+  sendBtn.disabled = (state === 'running');
+  stopBtn.disabled = (state !== 'running');
+  contBtn.disabled = (state !== 'paused');
+  input.disabled   = (state === 'running');
+}
+
+function chatScroll() {
+  const el = document.getElementById('chat-messages');
+  el.scrollTop = el.scrollHeight;
+}
+
+function chatAppendMessage(role, text, streaming = false) {
+  const container = document.getElementById('chat-messages');
+  const msg = document.createElement('div');
+  msg.className = 'msg ' + role;
+
+  const roleEl = document.createElement('span');
+  roleEl.className = 'msg-role';
+  roleEl.textContent = role === 'user' ? 'Вы' : 'New-mir';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble' + (streaming ? ' streaming' : '');
+  bubble.textContent = text;
+
+  msg.appendChild(roleEl);
+  msg.appendChild(bubble);
+  container.appendChild(msg);
+  chatScroll();
+  return bubble;
+}
+
+async function chatEnsureSession() {
+  if (chatSessionId) return;
+  const r = await fetch('/api/chat/session', { method: 'POST' });
+  const d = await r.json();
+  chatSessionId = d.session_id;
+}
+
+async function chatSend() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  await chatEnsureSession();
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Add user message
+  chatAppendMessage('user', text);
+
+  // Start streaming assistant reply
+  currentBubble = chatAppendMessage('assistant', '', true);
+  chatSetState('running');
+
+  const fd = new FormData();
+  fd.append('message', text);
+  fd.append('max_tokens', 4096);
+
+  try {
+    const resp = await fetch(`/api/chat/${chatSessionId}`, { method: 'POST', body: fd });
+    await chatReadStream(resp);
+  } catch(e) {
+    currentBubble.classList.remove('streaming');
+    currentBubble.textContent = 'Ошибка соединения: ' + e.message;
+    chatSetState('error');
+  }
+}
+
+async function chatContinue() {
+  if (!chatSessionId || chatState !== 'paused') return;
+  currentBubble = chatAppendMessage('assistant', '…продолжение…\n', true);
+  chatSetState('running');
+
+  try {
+    const resp = await fetch(`/api/chat/continue/${chatSessionId}`);
+    await chatReadStream(resp);
+  } catch(e) {
+    currentBubble.classList.remove('streaming');
+    currentBubble.textContent = 'Ошибка: ' + e.message;
+    chatSetState('error');
+  }
+}
+
+async function chatReadStream(resp) {
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+
+    // Process complete SSE lines
+    const lines = buf.split('\n');
+    buf = lines.pop(); // keep incomplete last line
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      try {
+        const evt = JSON.parse(line.slice(6));
+        if (evt.type === 'token') {
+          currentBubble.textContent += evt.text;
+          chatScroll();
+        } else if (evt.type === 'paused') {
+          currentBubble.classList.remove('streaming');
+          chatSetState('paused');
+          return;
+        } else if (evt.type === 'done') {
+          currentBubble.classList.remove('streaming');
+          chatSetState('idle');
+          return;
+        } else if (evt.type === 'error') {
+          currentBubble.classList.remove('streaming');
+          currentBubble.textContent += '\n[Ошибка: ' + evt.text + ']';
+          chatSetState('error');
+          return;
+        }
+      } catch (_) { /* skip malformed JSON */ }
+    }
+  }
+  if (currentBubble) currentBubble.classList.remove('streaming');
+  chatSetState('idle');
+}
+
+async function chatStop() {
+  if (!chatSessionId) return;
+  await fetch(`/api/chat/stop/${chatSessionId}`, { method: 'POST' });
+  // State will transition to 'paused' via the SSE paused event
+}
+
+async function chatNew() {
+  chatSessionId = null;
+  chatState = 'idle';
+  currentBubble = null;
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = `
+    <div class="msg assistant">
+      <span class="msg-role">New-mir</span>
+      <div class="msg-bubble">Новый диалог начат. Напиши задачу!</div>
+    </div>`;
+  chatSetState('idle');
+  await chatEnsureSession();
+}
+
+// Auto-resize input, Enter to send
+document.addEventListener('DOMContentLoaded', () => {
+  const inp = document.getElementById('chat-input');
+  inp.addEventListener('input', () => {
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 200) + 'px';
+  });
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!document.getElementById('chat-send-btn').disabled) chatSend();
+    }
+  });
+});
+
+// ─── Other State ─────────────────────────────────────────────────────────────
 let trainFiles = []; // {file, name, size, type}
 
 // ─── Navigation ──────────────────────────────────────────────────────────────
