@@ -118,6 +118,9 @@
     .chat-btns button { white-space: nowrap; padding: 9px 14px; font-size: 0.82rem; }
     .btn-stop { background: var(--red) !important; }
     .btn-cont { background: var(--orange) !important; }
+    .btn-test { background: var(--purple) !important; color: #0d1117 !important; }
+    .btn-test:hover { opacity: .85; }
+    .btn-test:disabled { opacity: .4; cursor: not-allowed; }
     .btn-new  { background: transparent !important; border: 1px solid var(--border) !important; color: var(--muted) !important; }
     .btn-new:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
   </style>
@@ -147,6 +150,7 @@
     <div class="chat-toolbar">
       <h2>💬 Диалог с New-mir</h2>
       <span id="chat-state-badge" class="chat-state idle">ожидание</span>
+      <button class="btn btn-test" id="chat-test-btn" onclick="chatRunTest()" title="Запустить проверку всех возможностей модели">▶ Проверить всё</button>
       <button class="btn btn-new" onclick="chatNew()" title="Новый диалог">+ Новый</button>
     </div>
 
@@ -155,9 +159,10 @@
       <div class="msg assistant">
         <span class="msg-role">New-mir</span>
         <div class="msg-bubble">
-Привет! Я New-mir — нейросеть для написания кода, книг, статей и всего что угодно.<br><br>
+Привет! Я New-mir — нейросеть на базе GPT-2, умею писать на русском, английском и других популярных языках мира.<br><br>
 Напиши задачу — я начну выполнять её и буду писать столько, сколько нужно.<br>
-Нажми <strong>Стоп</strong> чтобы прервать, <strong>Продолжить</strong> чтобы возобновить.
+Нажми <strong>Стоп</strong> чтобы прервать, <strong>Продолжить</strong> чтобы возобновить.<br>
+Нажми <strong>▶ Проверить всё</strong> чтобы запустить полную демо-проверку всех возможностей.
         </div>
       </div>
     </div>
@@ -388,11 +393,13 @@ function chatSetState(state) {
   const sendBtn = document.getElementById('chat-send-btn');
   const stopBtn = document.getElementById('chat-stop-btn');
   const contBtn = document.getElementById('chat-cont-btn');
+  const testBtn = document.getElementById('chat-test-btn');
   const input   = document.getElementById('chat-input');
 
   sendBtn.disabled = (state === 'running');
   stopBtn.disabled = (state !== 'running');
   contBtn.disabled = (state !== 'paused');
+  testBtn.disabled = (state === 'running');
   input.disabled   = (state === 'running');
 }
 
@@ -533,6 +540,35 @@ async function chatNew() {
     </div>`;
   chatSetState('idle');
   await chatEnsureSession();
+}
+
+// ─── Test All ──────────────────────────────────────────────────────────────
+// Sends a multi-step multilingual test to verify ALL model capabilities:
+// Russian + English + code generation.  Each step is sent as a new message.
+const _TEST_STEPS = [
+  'Привет! Представься по-русски: кто ты, что умеешь, на каких языках говоришь?',
+  'Hello! In one paragraph, describe what you are and what you can do.',
+  'Напиши короткое стихотворение (4 строки) на русском языке о нейросетях.',
+  'Write a Python function that reverses a string and returns it.',
+];
+
+async function chatRunTest() {
+  // Start a fresh session for the test
+  await chatNew();
+
+  for (const step of _TEST_STEPS) {
+    // Wait for previous generation to finish before sending next step
+    while (chatState === 'running') {
+      await new Promise(r => setTimeout(r, 300));
+    }
+    if (chatState === 'error') break;
+
+    const input = document.getElementById('chat-input');
+    input.value = step;
+    await chatSend();
+    // Small pause so the UI can render the user message before the next
+    await new Promise(r => setTimeout(r, 100));
+  }
 }
 
 // Auto-resize input, Enter to send

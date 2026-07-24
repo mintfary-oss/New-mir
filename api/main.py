@@ -11,7 +11,7 @@ POST /api/convert               → Convert uploaded file to binary
 POST /api/compress              → Compress raw text/bytes, return bit-string
 POST /api/encode-qr             → Encode text to QR-code slot IDs + PNG
 GET  /api/encode-qr/{slot_id}   → Retrieve QR PNG by slot_id
-POST /api/generate              → Generate code via NeuralCodeGen
+POST /api/generate              → Generate code via NeuralCodeGen (nano model)
 GET  /api/memory/stats          → HoneycombMemory pool statistics
 GET  /api/compression/estimate  → Compression ratio estimate for sample data
 POST /api/train                 → Train model on one or more uploaded files
@@ -25,6 +25,18 @@ GET  /api/chat/session/{id}     → Get session info + history
 
 All endpoints return JSON unless noted otherwise.  File upload endpoints
 accept multipart/form-data.  Chat streaming endpoints use text/event-stream.
+
+Streaming implementation note
+------------------------------
+The chat SSE endpoints use a threading.Queue bridge:
+
+  1. The synchronous ChatEngine generator runs in a daemon thread.
+  2. Each SSE chunk is put() into a Queue as it's produced.
+  3. The async generator get()s chunks via run_in_executor so the event
+     loop is never blocked.
+
+This ensures the browser receives tokens one at a time, and the Stop button
+works by setting the session's threading.Event between chunks.
 """
 
 from __future__ import annotations
@@ -33,6 +45,8 @@ import asyncio
 import base64
 import logging
 import os
+import queue
+import threading
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -46,6 +60,7 @@ from api.converters import convert_to_binary
 from core.binary_engine import BinaryCompressionEngine
 from core.cell_memory import HoneycombMemory
 from core.chat_engine import ChatEngine
+from core.gpt2_backend import GPT2Backend
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
 from core.trainer import HoneycombTrainer
@@ -68,7 +83,17 @@ _memory = HoneycombMemory(capacity=65_536)
 _memory_shards: list[HoneycombMemory] = [_memory]
 _qr_encoder = QRBinaryEncoder()
 _compression_engine = BinaryCompressionEngine()
+
+# Nano NeuralCodeGen — used for the Code Gen and Training tabs
 _neural_gen = NeuralCodeGen()
+
+# GPT-2 backend — used exclusively for the Chat tab
+# Model name can be overridden via NEW_MIR_CHAT_MODEL env var, e.g.:
+#   NEW_MIR_CHAT_MODEL=gpt2-medium
+#   NEW_MIR_CHAT_MODEL=sberbank-ai/rugpt3small   (Russian)
+#   NEW_MIR_CHAT_MODEL=bigscience/bloom-560m     (46 languages)
+_gpt2_gen = GPT2Backend()
+
 _trainer: HoneycombTrainer | None = None
 _chat_engine: ChatEngine | None = None
 
@@ -79,17 +104,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _trainer, _chat_engine
     logger.info("Starting New-mir …")
     loop = asyncio.get_event_loop()
+
+    # Load the nano model for code generation (fast, < 1 s)
     await loop.run_in_executor(None, _neural_gen.load_demo_weights)
-    logger.info(
-        "NeuralCodeGen weights loaded — params: %d", _neural_gen.parameter_count
-    )
+    logger.info("NeuralCodeGen (nano) loaded — params: %d", _neural_gen.parameter_count)
+
+    # Load GPT-2 for chat (downloads ~550 MB on first run, cached afterwards)
+    try:
+        await loop.run_in_executor(None, _gpt2_gen.load_demo_weights)
+        logger.info(
+            "GPT-2 '%s' loaded — params: %d",
+            _gpt2_gen.model_name,
+            _gpt2_gen.parameter_count,
+        )
+        chat_model: Any = _gpt2_gen
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "GPT-2 load failed (%s) — chat will fall back to nano model", exc
+        )
+        chat_model = _neural_gen
+
     _trainer = HoneycombTrainer(
         memory_shards=_memory_shards,
         qr_encoder=_qr_encoder,
         compression_engine=_compression_engine,
-        neural_gen=_neural_gen,
+        neural_gen=_neural_gen,  # training still uses the nano model
     )
-    _chat_engine = ChatEngine(neural_gen=_neural_gen)
+    _chat_engine = ChatEngine(neural_gen=chat_model)
     logger.info("HoneycombTrainer and ChatEngine ready.")
     yield
     logger.info("New-mir shutting down.")
@@ -104,9 +145,10 @@ app = FastAPI(
     description=(
         "Honeycomb-memory neural architecture for code generation. "
         "Stores data as QR-code binary slots, compresses everything with "
-        "multi-algorithm pipeline, generates code via numpy Transformer."
+        "multi-algorithm pipeline, generates code via numpy Transformer, "
+        "and chats via GPT-2."
     ),
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -143,10 +185,13 @@ async def health() -> dict[str, Any]:
     trainer_stats = _trainer.global_stats() if _trainer else {}
     return {
         "status": "ok",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "memory_cells": _memory.size,
         "qr_slots": _qr_encoder.slot_count,
         "model_params": _neural_gen.parameter_count,
+        "chat_model": _gpt2_gen.model_name,
+        "chat_model_params": _gpt2_gen.parameter_count,
+        "chat_model_loaded": _gpt2_gen.weights is not None,
         "trainer": trainer_stats,
     }
 
@@ -275,7 +320,7 @@ async def get_qr_image(slot_id: str) -> Response:
 
 
 # ---------------------------------------------------------------------------
-# Code generation
+# Code generation (nano NeuralCodeGen)
 # ---------------------------------------------------------------------------
 
 
@@ -442,26 +487,58 @@ async def compression_estimate(
 
 
 # ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
-
-def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
-    """Start the uvicorn server programmatically."""
-    workers = min(4, (os.cpu_count() or 2))
-    logger.info("Starting uvicorn on %s:%d with %d worker(s)", host, port, workers)
-    uvicorn.run(
-        "api.main:app",
-        host=host,
-        port=port,
-        workers=workers,
-        log_level="info",
-    )
-
-
-# ---------------------------------------------------------------------------
 # Chat — SSE streaming dialogue
 # ---------------------------------------------------------------------------
+#
+# STREAMING FIX:
+# The previous implementation used:
+#
+#   for chunk in await loop.run_in_executor(None, list, _sync_gen()):
+#       yield chunk
+#
+# This collected ALL tokens into a list before sending the first byte,
+# making Stop/Continue completely non-functional.  The corrected version
+# uses a threading.Queue bridge: the generator thread puts() chunks as
+# they're produced, and the async generator gets() them one at a time
+# via run_in_executor without ever blocking the event loop.
+# ---------------------------------------------------------------------------
+
+_SSE_QUEUE_MAXSIZE = 256  # max buffered chunks per stream
+
+
+def _stream_via_queue(
+    sync_gen_fn: Iterator[str],
+    loop: asyncio.AbstractEventLoop,
+) -> AsyncGenerator[str, None]:
+    """
+    Bridge a synchronous SSE generator to an async one using a Queue.
+
+    The generator runs in a daemon thread; the async generator yields
+    chunks as they arrive, preserving true token-by-token streaming.
+    """
+    q: queue.Queue[str | None] = queue.Queue(maxsize=_SSE_QUEUE_MAXSIZE)
+
+    def _producer() -> None:
+        try:
+            for chunk in sync_gen_fn:
+                q.put(chunk)
+        except Exception:  # noqa: BLE001
+            pass
+        finally:
+            q.put(None)  # sentinel: generation finished
+
+    thread = threading.Thread(target=_producer, daemon=True)
+    thread.start()
+
+    async def _consumer() -> AsyncGenerator[str, None]:
+        while True:
+            chunk = await loop.run_in_executor(None, q.get)
+            if chunk is None:
+                break
+            yield chunk
+        thread.join(timeout=5.0)
+
+    return _consumer()
 
 
 @app.post("/api/chat/session", tags=["Chat"])
@@ -492,6 +569,9 @@ async def chat_send(
 
     Generation is **unbounded** — the model keeps writing until the task
     is complete or the user calls ``POST /api/chat/stop/{session_id}``.
+
+    Tokens are streamed one chunk at a time (not buffered), so the Stop
+    button interrupts generation at the next chunk boundary.
     """
     if _chat_engine is None:
         raise HTTPException(status_code=503, detail="Chat engine not ready")
@@ -502,20 +582,15 @@ async def chat_send(
 
     loop = asyncio.get_event_loop()
 
-    def _sync_gen() -> Iterator[str]:
-        yield from _chat_engine.generate_stream(  # type: ignore[union-attr]
-            session_id=session_id,
-            user_message=message,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-
-    async def _async_gen() -> AsyncGenerator[str, None]:
-        for chunk in await loop.run_in_executor(None, list, _sync_gen()):
-            yield chunk
+    sync_gen = _chat_engine.generate_stream(
+        session_id=session_id,
+        user_message=message,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
 
     return StreamingResponse(
-        _async_gen(),
+        _stream_via_queue(sync_gen, loop),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -534,25 +609,21 @@ async def chat_continue(
     Resume a PAUSED session from where it stopped.
 
     Returns the same SSE stream format as the send endpoint.
+    Tokens are streamed in real-time; pressing Stop pauses again.
     """
     if _chat_engine is None:
         raise HTTPException(status_code=503, detail="Chat engine not ready")
 
     loop = asyncio.get_event_loop()
 
-    def _sync_gen() -> Iterator[str]:
-        yield from _chat_engine.continue_stream(  # type: ignore[union-attr]
-            session_id=session_id,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-
-    async def _async_gen() -> AsyncGenerator[str, None]:
-        for chunk in await loop.run_in_executor(None, list, _sync_gen()):
-            yield chunk
+    sync_gen = _chat_engine.continue_stream(
+        session_id=session_id,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
 
     return StreamingResponse(
-        _async_gen(),
+        _stream_via_queue(sync_gen, loop),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -596,6 +667,19 @@ async def get_chat_session(session_id: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
+
+def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
+    """Start the uvicorn server programmatically."""
+    workers = min(4, (os.cpu_count() or 2))
+    logger.info("Starting uvicorn on %s:%d with %d worker(s)", host, port, workers)
+    uvicorn.run(
+        "api.main:app",
+        host=host,
+        port=port,
+        workers=workers,
+        log_level="info",
+    )
 
 
 if __name__ == "__main__":
