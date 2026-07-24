@@ -14,6 +14,8 @@ GET  /api/encode-qr/{slot_id}   → Retrieve QR PNG by slot_id
 POST /api/generate              → Generate code via NeuralCodeGen
 GET  /api/memory/stats          → HoneycombMemory pool statistics
 GET  /api/compression/estimate  → Compression ratio estimate for sample data
+POST /api/train                 → Train model on one or more uploaded files
+GET  /api/train/stats           → Global training / memory stats
 
 All endpoints return JSON unless noted otherwise.  File upload endpoints
 accept multipart/form-data.
@@ -45,6 +47,7 @@ from core.binary_engine import BinaryCompressionEngine
 from core.cell_memory import HoneycombMemory
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
+from core.trainer import HoneycombTrainer
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -61,21 +64,30 @@ logger = logging.getLogger("new-mir.api")
 # ---------------------------------------------------------------------------
 
 _memory = HoneycombMemory(capacity=65_536)
+_memory_shards: list[HoneycombMemory] = [_memory]
 _qr_encoder = QRBinaryEncoder()
 _compression_engine = BinaryCompressionEngine()
 _neural_gen = NeuralCodeGen()
+_trainer: HoneycombTrainer | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup / shutdown logic."""
+    global _trainer
     logger.info("Starting New-mir …")
-    # Load demo weights in a thread so we don't block the event loop
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _neural_gen.load_demo_weights)
     logger.info(
         "NeuralCodeGen weights loaded — params: %d", _neural_gen.parameter_count
     )
+    _trainer = HoneycombTrainer(
+        memory_shards=_memory_shards,
+        qr_encoder=_qr_encoder,
+        compression_engine=_compression_engine,
+        neural_gen=_neural_gen,
+    )
+    logger.info("HoneycombTrainer ready.")
     yield
     logger.info("New-mir shutting down.")
 
@@ -125,12 +137,14 @@ async def index() -> str:
 
 @app.get("/api/health", tags=["System"])
 async def health() -> dict[str, Any]:
+    trainer_stats = _trainer.global_stats() if _trainer else {}
     return {
         "status": "ok",
         "version": "1.0.0",
         "memory_cells": _memory.size,
         "qr_slots": _qr_encoder.slot_count,
         "model_params": _neural_gen.parameter_count,
+        "trainer": trainer_stats,
     }
 
 
@@ -318,6 +332,73 @@ async def generate_code(
         "generated": generated,
         "tokens_generated": len(generated) - len(prompt),
     }
+
+
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/train", tags=["Training"])
+async def train_files(
+    files: list[UploadFile],
+) -> JSONResponse:
+    """
+    Upload one or more files and train the neural network on them.
+
+    Supports **any file type**: weights (.pt/.bin/.npz), machine code,
+    ZIP/tar archives, text, source code, PDF, DOCX, images, audio, video, etc.
+
+    Process
+    -------
+    For each file:
+    1. Convert to compressed binary (Layer 3).
+    2. Encode into QR-code slots (Layer 2).
+    3. Store slot references in a honeycomb cell (Layer 1).
+    4. Fine-tune model on text content if the file is text/code/PDF/DOCX.
+    5. Discard raw bytes — only QR-slot references persist.
+
+    If the active memory shard reaches 70% capacity a new shard of
+    65 536 cells is created automatically.
+
+    Returns
+    -------
+    JSON TrainingSession summary.
+    """
+    if _trainer is None:
+        raise HTTPException(status_code=503, detail="Trainer not initialised")
+
+    if not files:
+        raise HTTPException(status_code=400, detail="No files uploaded")
+
+    # Read all files concurrently
+    async def _read(f: UploadFile) -> tuple[str, bytes]:
+        data = await f.read()
+        return (f.filename or "upload", data)
+
+    pairs = await asyncio.gather(*[_read(f) for f in files])
+
+    # Filter empties
+    valid = [(name, data) for name, data in pairs if data]
+    if not valid:
+        raise HTTPException(status_code=400, detail="All uploaded files are empty")
+
+    loop = asyncio.get_event_loop()
+    session = await loop.run_in_executor(
+        None,
+        _trainer.train_files,
+        list(valid),
+    )
+
+    return JSONResponse(content=session.to_dict())
+
+
+@app.get("/api/train/stats", tags=["Training"])
+async def training_stats() -> dict[str, Any]:
+    """Return global training / memory statistics across all shards."""
+    if _trainer is None:
+        return {"error": "Trainer not initialised"}
+    return _trainer.global_stats()
 
 
 # ---------------------------------------------------------------------------

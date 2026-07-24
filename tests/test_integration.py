@@ -204,3 +204,74 @@ class TestNeuralCodeGen:
             max_new_tokens=32,
         )
         assert isinstance(result, str)
+
+
+# ---------------------------------------------------------------------------
+# HoneycombTrainer
+# ---------------------------------------------------------------------------
+
+
+class TestHoneycombTrainer:
+    def setup_method(self) -> None:
+        from core.trainer import HoneycombTrainer
+
+        self.mem = HoneycombMemory(capacity=200)
+        self.enc = QRBinaryEncoder()
+        self.engine = BinaryCompressionEngine()
+        self.gen = NeuralCodeGen(embed_dim=32, num_heads=2, num_layers=1, ff_dim=64)
+        self.gen.load_demo_weights()
+        self.trainer = HoneycombTrainer(
+            memory_shards=[self.mem],
+            qr_encoder=self.enc,
+            compression_engine=self.engine,
+            neural_gen=self.gen,
+        )
+
+    def test_train_text_file(self) -> None:
+        code = b"def add(a, b):\n    return a + b\n"
+        session = self.trainer.train_files([("add.py", code)])
+        d = session.to_dict()
+        assert d["files_trained"] == 1
+        assert d["cells_written"] == 1
+        assert len(session.accepted_files) == 1
+        f = session.accepted_files[0]
+        assert f["filename"] == "add.py"
+        assert int(f["qr_slots"]) >= 1  # type: ignore[arg-type]
+
+    def test_train_binary_file(self) -> None:
+        raw = bytes(range(256)) * 10
+        session = self.trainer.train_files([("data.bin", raw)])
+        assert len(session.accepted_files) == 1
+
+    def test_train_multiple_files(self) -> None:
+        files = [
+            ("a.py", b"x = 1\n"),
+            ("b.js", b"const x = 1;\n"),
+            ("c.go", b"package main\nfunc main() {}\n"),
+        ]
+        session = self.trainer.train_files(files)
+        d = session.to_dict()
+        assert d["files_trained"] == 3
+        assert d["cells_written"] == 3
+
+    def test_auto_shard_expansion(self) -> None:
+        """Fill shard past 70% threshold and verify new shard is created."""
+        tiny_mem = HoneycombMemory(capacity=3)
+        from core.trainer import HoneycombTrainer
+
+        trainer = HoneycombTrainer(
+            memory_shards=[tiny_mem],
+            qr_encoder=self.enc,
+            compression_engine=self.engine,
+            neural_gen=self.gen,
+        )
+        files = [(f"f{i}.txt", f"content {i}".encode()) for i in range(4)]
+        session = trainer.train_files(files)
+        assert session.shards_created >= 1
+
+    def test_global_stats(self) -> None:
+        self.trainer.train_files([("test.txt", b"hello world")])
+        stats = self.trainer.global_stats()
+        assert int(stats["total_cells"]) >= 1  # type: ignore[arg-type]
+        assert int(stats["shards"]) >= 1  # type: ignore[arg-type]
+        assert float(stats["fill_percent"]) >= 0  # type: ignore[arg-type]

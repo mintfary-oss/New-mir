@@ -15,50 +15,79 @@
       --green: #3fb950;
       --orange: #f0883e;
       --red: #f85149;
+      --purple: #bc8cff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
-    header h1 { font-size: 1.4rem; color: var(--accent); }
-    header span { color: var(--muted); font-size: 0.9rem; }
-    nav { display: flex; gap: 8px; margin-left: auto; }
-    nav button { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: border-color .2s; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header h1 { font-size: 1.3rem; color: var(--accent); white-space: nowrap; }
+    header span { color: var(--muted); font-size: 0.85rem; }
+    nav { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+    nav button { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; transition: border-color .2s; }
     nav button.active, nav button:hover { border-color: var(--accent); color: var(--accent); }
-    main { max-width: 960px; margin: 32px auto; padding: 0 24px; }
+    nav button.train-btn { border-color: var(--green); color: var(--green); }
+    nav button.train-btn.active, nav button.train-btn:hover { background: rgba(63,185,80,.15); }
+    main { max-width: 980px; margin: 28px auto; padding: 0 20px; }
     .panel { display: none; }
     .panel.active { display: block; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 20px; }
-    h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--accent); }
-    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 22px; margin-bottom: 18px; }
+    h2 { font-size: 1.05rem; margin-bottom: 14px; color: var(--accent); }
+    h3 { font-size: 0.9rem; color: var(--muted); margin: 12px 0 8px; }
+    label { display: block; font-size: 0.83rem; color: var(--muted); margin-bottom: 5px; }
     textarea, input[type=text], input[type=number], select {
       width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
-      padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 0.9rem; resize: vertical;
+      padding: 9px 11px; border-radius: 6px; font-family: monospace; font-size: 0.88rem; resize: vertical;
     }
-    textarea { min-height: 120px; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-    .row > * { flex: 1; min-width: 160px; }
+    textarea { min-height: 110px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .row > * { flex: 1; min-width: 150px; }
     button.btn {
-      background: var(--accent); color: #0d1117; border: none; padding: 10px 20px;
-      border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
-      transition: opacity .2s;
+      background: var(--accent); color: #0d1117; border: none; padding: 9px 18px;
+      border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.88rem; transition: opacity .2s;
     }
+    button.btn.green { background: var(--green); }
+    button.btn.orange { background: var(--orange); }
     button.btn:hover { opacity: .85; }
     button.btn:disabled { opacity: .4; cursor: not-allowed; }
-    .result { margin-top: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; max-height: 360px; overflow-y: auto; }
-    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-    .tag-green { background: rgba(63,185,80,.2); color: var(--green); }
-    .tag-blue { background: rgba(88,166,255,.2); color: var(--accent); }
-    .tag-orange { background: rgba(240,136,62,.2); color: var(--orange); }
-    .stat-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; }
-    .stat { text-align: center; }
-    .stat .val { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
-    .stat .lbl { font-size: 0.75rem; color: var(--muted); }
-    #qr-img { max-width: 200px; image-rendering: pixelated; border: 4px solid white; margin-top: 12px; }
-    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-left: 8px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 32px; text-align: center; cursor: pointer; transition: border-color .2s; color: var(--muted); }
-    .drop-zone:hover, .drop-zone.over { border-color: var(--accent); color: var(--accent); }
+    .result { margin-top: 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; }
+    .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+    .stat { text-align: center; min-width: 80px; }
+    .stat .val { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .stat .lbl { font-size: 0.72rem; color: var(--muted); }
+    #qr-img { max-width: 200px; image-rendering: pixelated; border: 4px solid white; margin-top: 10px; }
+
+    /* Drop zones */
+    .drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 28px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; color: var(--muted); }
+    .drop-zone:hover, .drop-zone.over { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,.04); }
     .drop-zone input { display: none; }
+    .drop-zone .dz-title { font-size: 1rem; margin-bottom: 6px; }
+    .drop-zone .dz-sub { font-size: 0.78rem; line-height: 1.5; }
+
+    /* Training-specific */
+    .train-drop { border-color: var(--green); }
+    .train-drop:hover, .train-drop.over { border-color: var(--green); background: rgba(63,185,80,.05); color: var(--green); }
+    .file-list { margin-top: 12px; max-height: 200px; overflow-y: auto; }
+    .file-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 0.82rem; }
+    .file-item .fname { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-item .fsize { color: var(--muted); white-space: nowrap; }
+    .file-item .ftype { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(88,166,255,.15); color: var(--accent); white-space: nowrap; }
+    .file-item .fdel { background: none; border: none; color: var(--red); cursor: pointer; font-size: 1rem; line-height: 1; padding: 0 4px; }
+    .progress-wrap { margin-top: 14px; }
+    .progress-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+    .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--green); border-radius: 4px; transition: width .4s; }
+    .progress-fill.warn { background: var(--orange); }
+    .progress-fill.full { background: var(--red); }
+    .train-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 14px; }
+    .train-stat { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .train-stat .val { font-size: 1.4rem; font-weight: 700; color: var(--green); }
+    .train-stat .lbl { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+    .file-result { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 6px; font-size: 0.78rem; }
+    .file-result .fr-name { color: var(--accent); font-weight: 600; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-result .fr-row { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); }
+    .file-result .fr-val { color: var(--text); }
+    .shard-notice { background: rgba(240,136,62,.12); border: 1px solid var(--orange); border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 0.82rem; color: var(--orange); }
+    .err-notice { background: rgba(248,81,73,.1); border: 1px solid var(--red); border-radius: 6px; padding: 10px 14px; margin-top: 8px; font-size: 0.8rem; color: var(--red); }
   </style>
 </head>
 <body>
@@ -66,6 +95,7 @@
   <h1>⬡ New-mir</h1>
   <span>Neural Code Engine · Honeycomb Architecture</span>
   <nav>
+    <button onclick="switchPanel('train')" class="train-btn">⬡ Обучение</button>
     <button class="active" onclick="switchPanel('generate')">Code Gen</button>
     <button onclick="switchPanel('convert')">Convert</button>
     <button onclick="switchPanel('compress')">Compress</button>
@@ -75,6 +105,88 @@
 </header>
 
 <main>
+
+<!-- ======================== TRAIN ======================== -->
+<div id="panel-train" class="panel">
+
+  <!-- Drop zone -->
+  <div class="card">
+    <h2>⬡ Обучение нейросети — загрузка любых файлов</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px">
+      Поддерживаются <strong style="color:var(--text)">все типы файлов</strong>:
+      веса нейросетей (.pt .bin .npz .h5 .gguf), машинный код, архивы ZIP/tar/gz,
+      репозитории GitHub, исходный код всех языков, PDF, DOCX, книги, изображения,
+      аудио, видео, базы данных — любая информация.<br>
+      После обучения исходные файлы удаляются; обученная информация хранится вечно
+      в сотах-ячейках в виде бинарного машинного кода (0 и 1).
+    </p>
+
+    <div class="drop-zone train-drop" id="train-drop"
+         onclick="document.getElementById('train-file-input').click()">
+      <input type="file" id="train-file-input" multiple onchange="trainFilesAdded(this)">
+      <div class="dz-title">Перетащите файлы сюда или нажмите для выбора</div>
+      <div class="dz-sub">
+        .pt · .bin · .npz · .gguf · .zip · .tar.gz · .py · .js · .go · .rs · .c · .cpp<br>
+        .pdf · .docx · .txt · .md · .csv · .json · .mp4 · .mp3 · .wav · .png · .jpg · …
+      </div>
+    </div>
+
+    <!-- Selected file list -->
+    <div id="train-file-list" class="file-list" style="display:none"></div>
+
+    <!-- Memory fill bar -->
+    <div class="progress-wrap" id="train-progress-wrap" style="display:none">
+      <div class="progress-label">
+        <span>Заполненность памяти (сот-ячеек)</span>
+        <span id="train-fill-pct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="train-fill-bar" style="width:0%"></div>
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);margin-top:4px">
+        При заполнении 70% автоматически создаётся новый блок из 65 536 сот-ячеек
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+      <button class="btn green" id="train-btn" onclick="startTraining()" disabled>
+        ▶ Обучить
+      </button>
+      <button class="btn orange" onclick="clearTrainFiles()" style="background:transparent;color:var(--orange);border:1px solid var(--orange)">
+        Очистить
+      </button>
+      <span id="train-status" style="font-size:.82rem;color:var(--muted)"></span>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="train-results-card" style="display:none">
+    <h2>Результаты обучения</h2>
+
+    <!-- Shard expansion notice (shown if new shards created) -->
+    <div id="train-shard-notice" class="shard-notice" style="display:none"></div>
+
+    <!-- Errors -->
+    <div id="train-err-notice" class="err-notice" style="display:none"></div>
+
+    <!-- Summary stats grid -->
+    <div class="train-summary" id="train-summary"></div>
+
+    <!-- Per-file breakdown -->
+    <h3>Детали по файлам</h3>
+    <div id="train-files-detail"></div>
+  </div>
+
+  <!-- Global memory stats (auto-refreshed after each train) -->
+  <div class="card">
+    <h2>Состояние памяти</h2>
+    <button class="btn" onclick="loadTrainStats()" style="font-size:.8rem;padding:6px 14px">
+      Обновить
+    </button>
+    <div class="stat-row" id="train-mem-stats" style="margin-top:14px"></div>
+  </div>
+
+</div>
 
 <!-- ======================== CODE GENERATION ======================== -->
 <div id="panel-generate" class="panel active">
@@ -122,8 +234,8 @@
     <h2>Convert Any File → Binary (0/1)</h2>
     <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <input type="file" id="file-input" onchange="handleFileSelect(this)">
-      <div>Drop any file here or click to upload</div>
-      <div style="font-size:.8rem;margin-top:4px">Text · PDF · DOCX · Images · Audio · Video · Code · …</div>
+      <div class="dz-title">Drop any file here or click to upload</div>
+      <div class="dz-sub">Text · PDF · DOCX · Images · Audio · Video · Code · …</div>
     </div>
     <div id="conv-result" class="result" style="display:none"></div>
   </div>
@@ -176,19 +288,24 @@
   <div class="card">
     <h2>HoneycombMemory Stats (Layer 1)</h2>
     <button class="btn" onclick="loadMemoryStats()">Refresh ▶</button>
-    <div id="mem-stats" class="stat-row" style="margin-top:16px"></div>
-    <div id="mem-cells" class="result" style="display:none;margin-top:12px"></div>
+    <div id="mem-stats" class="stat-row" style="margin-top:14px"></div>
+    <div id="mem-cells" class="result" style="display:none;margin-top:10px"></div>
   </div>
 </div>
 
 </main>
 
 <script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let trainFiles = []; // {file, name, size, type}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
 function switchPanel(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   event.target.classList.add('active');
+  if (name === 'train') loadTrainStats();
 }
 
 function showResult(id, content) {
@@ -206,22 +323,185 @@ async function apiFetch(url, opts) {
   return r.json();
 }
 
-async function generateCode() {
-  const btn = event.target;
-  btn.disabled = true;
-  try {
-    const fd = new FormData();
-    fd.append('prompt', document.getElementById('gen-prompt').value);
-    fd.append('language', document.getElementById('gen-lang').value);
-    fd.append('max_new_tokens', document.getElementById('gen-tokens').value);
-    fd.append('temperature', document.getElementById('gen-temp').value);
-    fd.append('description_mode', document.getElementById('gen-mode').value === 'description');
-    const data = await apiFetch('/api/generate', { method: 'POST', body: fd });
-    showResult('gen-result', data.generated);
-  } catch(e) { showResult('gen-result', 'Error: ' + e.message); }
-  finally { btn.disabled = false; }
+// ─── Training Tab ────────────────────────────────────────────────────────────
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
 }
 
+function guessType(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const map = {
+    py:'Python', js:'JavaScript', ts:'TypeScript', go:'Go', rs:'Rust',
+    c:'C', cpp:'C++', java:'Java', cs:'C#', rb:'Ruby', php:'PHP',
+    swift:'Swift', kt:'Kotlin', sh:'Shell', lua:'Lua',
+    pt:'PyTorch', bin:'Binary', npz:'NumPy', h5:'HDF5', gguf:'GGUF', safetensors:'Safetensors',
+    zip:'Archive', gz:'Archive', tar:'Archive', '7z':'Archive', rar:'Archive',
+    pdf:'PDF', docx:'DOCX', doc:'DOC', xlsx:'Excel', pptx:'PPT',
+    txt:'Text', md:'Markdown', csv:'CSV', json:'JSON', yaml:'YAML', xml:'XML',
+    mp4:'Video', mkv:'Video', avi:'Video', mov:'Video', webm:'Video',
+    mp3:'Audio', wav:'Audio', flac:'Audio', ogg:'Audio', aac:'Audio',
+    png:'Image', jpg:'Image', jpeg:'Image', gif:'Image', bmp:'Image', webp:'Image',
+    sql:'SQL', db:'Database', sqlite:'SQLite',
+  };
+  return map[ext] || ext.toUpperCase() || 'File';
+}
+
+function renderTrainFileList() {
+  const list = document.getElementById('train-file-list');
+  if (trainFiles.length === 0) { list.style.display = 'none'; return; }
+  list.style.display = 'block';
+  list.innerHTML = trainFiles.map((f, i) => `
+    <div class="file-item">
+      <span class="ftype">${guessType(f.name)}</span>
+      <span class="fname" title="${f.name}">${f.name}</span>
+      <span class="fsize">${fmtSize(f.size)}</span>
+      <button class="fdel" onclick="removeTrainFile(${i})" title="Удалить">×</button>
+    </div>
+  `).join('');
+  document.getElementById('train-btn').disabled = trainFiles.length === 0;
+}
+
+function trainFilesAdded(input) {
+  for (const file of input.files) {
+    if (!trainFiles.find(f => f.name === file.name && f.size === file.size)) {
+      trainFiles.push({ file, name: file.name, size: file.size });
+    }
+  }
+  input.value = '';
+  renderTrainFileList();
+}
+
+function removeTrainFile(idx) {
+  trainFiles.splice(idx, 1);
+  renderTrainFileList();
+}
+
+function clearTrainFiles() {
+  trainFiles = [];
+  renderTrainFileList();
+  document.getElementById('train-results-card').style.display = 'none';
+}
+
+async function startTraining() {
+  if (trainFiles.length === 0) return;
+  const btn = document.getElementById('train-btn');
+  const status = document.getElementById('train-status');
+  btn.disabled = true;
+  status.textContent = `Обучение… (${trainFiles.length} файлов)`;
+
+  const fd = new FormData();
+  for (const f of trainFiles) fd.append('files', f.file, f.name);
+
+  try {
+    const data = await apiFetch('/api/train', { method: 'POST', body: fd });
+    renderTrainResults(data);
+    // Clear files after successful training
+    trainFiles = [];
+    renderTrainFileList();
+    status.textContent = '✓ Обучение завершено';
+    setTimeout(() => { status.textContent = ''; }, 4000);
+    loadTrainStats();
+  } catch(e) {
+    status.textContent = 'Ошибка: ' + e.message;
+  } finally {
+    btn.disabled = trainFiles.length === 0;
+  }
+}
+
+function renderTrainResults(d) {
+  const card = document.getElementById('train-results-card');
+  card.style.display = 'block';
+
+  // Shard notice
+  const shardEl = document.getElementById('train-shard-notice');
+  if (d.shards_created > 0) {
+    shardEl.style.display = 'block';
+    shardEl.textContent =
+      `⬡ Создан новый блок памяти (${d.shards_created} шт.) — ` +
+      `предыдущий блок заполнен на 70%. Ёмкость расширена на 65 536 сот-ячеек.`;
+  } else {
+    shardEl.style.display = 'none';
+  }
+
+  // Error notice
+  const errEl = document.getElementById('train-err-notice');
+  if (d.errors && d.errors.length > 0) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Ошибки:\n' + d.errors.join('\n');
+  } else {
+    errEl.style.display = 'none';
+  }
+
+  // Summary stats
+  const items = [
+    { val: d.files_trained, lbl: 'Файлов обучено' },
+    { val: d.cells_written, lbl: 'Сот-ячеек записано' },
+    { val: d.shards_created, lbl: 'Новых блоков' },
+    { val: d.avg_fine_tune_loss !== null ? d.avg_fine_tune_loss.toFixed(4) : '—', lbl: 'Avg loss' },
+    { val: d.duration_s.toFixed(2) + 's', lbl: 'Время' },
+  ];
+  document.getElementById('train-summary').innerHTML = items.map(it => `
+    <div class="train-stat">
+      <div class="val">${it.val}</div>
+      <div class="lbl">${it.lbl}</div>
+    </div>
+  `).join('');
+
+  // Per-file breakdown
+  const detail = document.getElementById('train-files-detail');
+  if (d.accepted_files && d.accepted_files.length > 0) {
+    detail.innerHTML = d.accepted_files.map(f => `
+      <div class="file-result">
+        <div class="fr-name">📄 ${f.filename}</div>
+        <div class="fr-row">
+          <span>Тип: <span class="fr-val">${f.mime_type}</span></span>
+          <span>Размер: <span class="fr-val">${fmtSize(f.size_bytes)}</span></span>
+          <span>QR-коды: <span class="fr-val">${f.qr_slots}</span></span>
+          <span>Сжатие: <span class="fr-val">${f.compression_ratio}×</span></span>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    detail.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Нет данных</div>';
+  }
+}
+
+async function loadTrainStats() {
+  try {
+    const d = await apiFetch('/api/train/stats');
+    // Memory fill bar
+    const wrap = document.getElementById('train-progress-wrap');
+    wrap.style.display = 'block';
+    const pct = d.fill_percent || 0;
+    document.getElementById('train-fill-pct').textContent = pct.toFixed(1) + '%';
+    const bar = document.getElementById('train-fill-bar');
+    bar.style.width = Math.min(pct, 100) + '%';
+    bar.className = 'progress-fill' + (pct >= 90 ? ' full' : pct >= 70 ? ' warn' : '');
+
+    // Stats row
+    const container = document.getElementById('train-mem-stats');
+    const items = [
+      { k: 'shards', l: 'Блоков памяти' },
+      { k: 'total_cells', l: 'Всего сот' },
+      { k: 'total_capacity', l: 'Ёмкость' },
+      { k: 'qr_slots', l: 'QR-слотов' },
+    ];
+    container.innerHTML = items.map(({k, l}) => `
+      <div class="stat">
+        <div class="val">${(d[k]||0).toLocaleString()}</div>
+        <div class="lbl">${l}</div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('train-mem-stats').innerHTML =
+      `<span style="color:var(--muted);font-size:.8rem">Ошибка загрузки: ${e.message}</span>`;
+  }
+}
+
+// ─── Convert Tab ─────────────────────────────────────────────────────────────
 async function handleFileSelect(input) {
   const file = input.files[0];
   if (!file) return;
@@ -234,6 +514,7 @@ async function handleFileSelect(input) {
   } catch(e) { showResult('conv-result', 'Error: ' + e.message); }
 }
 
+// ─── Compress Tab ─────────────────────────────────────────────────────────────
 async function compressText() {
   const btn = event.target; btn.disabled = true;
   try {
@@ -257,6 +538,23 @@ async function estimateRatio() {
   finally { btn.disabled = false; }
 }
 
+// ─── Code Gen Tab ─────────────────────────────────────────────────────────────
+async function generateCode() {
+  const btn = event.target; btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('prompt', document.getElementById('gen-prompt').value);
+    fd.append('language', document.getElementById('gen-lang').value);
+    fd.append('max_new_tokens', document.getElementById('gen-tokens').value);
+    fd.append('temperature', document.getElementById('gen-temp').value);
+    fd.append('description_mode', document.getElementById('gen-mode').value === 'description');
+    const data = await apiFetch('/api/generate', { method: 'POST', body: fd });
+    showResult('gen-result', data.generated);
+  } catch(e) { showResult('gen-result', 'Error: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+// ─── QR Tab ───────────────────────────────────────────────────────────────────
 async function encodeQR() {
   const btn = event.target; btn.disabled = true;
   const img = document.getElementById('qr-img');
@@ -274,6 +572,7 @@ async function encodeQR() {
   finally { btn.disabled = false; }
 }
 
+// ─── Memory Tab ───────────────────────────────────────────────────────────────
 async function loadMemoryStats() {
   try {
     const data = await apiFetch('/api/memory/stats');
@@ -295,7 +594,7 @@ async function loadMemoryStats() {
   } catch(e) { document.getElementById('mem-stats').innerHTML = 'Error: ' + e.message; }
 }
 
-// Drag & drop
+// ─── Drag & drop (Convert tab) ────────────────────────────────────────────────
 const dz = document.getElementById('drop-zone');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('over'));
@@ -304,11 +603,28 @@ dz.addEventListener('drop', e => {
   const file = e.dataTransfer.files[0];
   if (!file) return;
   const inp = document.getElementById('file-input');
-  const dt = new DataTransfer();
-  dt.items.add(file);
+  const dt = new DataTransfer(); dt.items.add(file);
   inp.files = dt.files;
   handleFileSelect(inp);
 });
+
+// ─── Drag & drop (Train tab) ──────────────────────────────────────────────────
+const tdz = document.getElementById('train-drop');
+tdz.addEventListener('dragover', e => { e.preventDefault(); tdz.classList.add('over'); });
+tdz.addEventListener('dragleave', () => tdz.classList.remove('over'));
+tdz.addEventListener('drop', e => {
+  e.preventDefault(); tdz.classList.remove('over');
+  const files = Array.from(e.dataTransfer.files);
+  for (const file of files) {
+    if (!trainFiles.find(f => f.name === file.name && f.size === file.size)) {
+      trainFiles.push({ file, name: file.name, size: file.size });
+    }
+  }
+  renderTrainFileList();
+});
+
+// ─── Initial stats load ───────────────────────────────────────────────────────
+window.addEventListener('load', () => loadTrainStats());
 </script>
 </body>
 </html>
