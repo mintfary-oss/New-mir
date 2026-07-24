@@ -63,6 +63,7 @@ from core.chat_engine import ChatEngine
 from core.gpt2_backend import GPT2Backend
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
+from core.seed_trainer import run_seed_training
 from core.trainer import HoneycombTrainer
 
 # ---------------------------------------------------------------------------
@@ -132,6 +133,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     _chat_engine = ChatEngine(neural_gen=chat_model)
     logger.info("HoneycombTrainer and ChatEngine ready.")
+
+    # Auto-train on seed data (Russian, Rust, multilingual, Python) on first startup.
+    # Skipped automatically if already done (flag in data/training_stats.json).
+    try:
+        await loop.run_in_executor(None, run_seed_training, _trainer)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Seed training skipped: %s", exc)
+
     yield
     logger.info("New-mir shutting down.")
 
