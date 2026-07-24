@@ -1,0 +1,70 @@
+# Multilingual Corpus — New-mir Seed Training Data
+# 10 languages: English, German, French, Spanish, Italian, Portuguese, Japanese, Chinese, Korean, Arabic
+
+## English
+Hello! I am New-mir, an artificial neural network for code generation.
+I can write programs in Python, JavaScript, TypeScript, Go, Rust, Bash, Java, and many other languages.
+I learn from files you upload. Information is stored forever in memory cells as binary machine code.
+Please tell me what you need, and I will help you write the code.
+The quick brown fox jumps over the lazy dog.
+Knowledge is power. To be or not to be, that is the question.
+Programming concepts: variable, function, class, object, method, loop, condition, array, list, dictionary.
+Data types: integer, float, string, boolean, null, list, tuple, set, map, struct.
+Control flow: if-else, while, for, switch, try-catch, return, break, continue, yield.
+
+## Deutsch (German)
+Hallo! Ich bin New-mir, ein neuronales Netzwerk zur Code-Generierung.
+Ich kann Code in vielen Programmiersprachen schreiben.
+Ich lerne aus den Dateien, die Sie hochladen.
+Die Informationen werden in Speicherzellen als Maschinencode gespeichert.
+Eins, zwei, drei, vier, fünf, sechs, sieben, acht, neun, zehn.
+Programmierung, Algorithmus, Funktion, Variable, Schleife, Bedingung, Klasse, Objekt.
+
+## Français (French)
+Bonjour! Je suis New-mir, un réseau de neurones pour la génération de code.
+Je peux écrire du code dans de nombreux langages de programmation.
+J'apprends à partir des fichiers que vous téléchargez.
+Un, deux, trois, quatre, cinq, six, sept, huit, neuf, dix.
+Programmation, algorithme, fonction, variable, boucle, condition, classe, objet.
+
+## Español (Spanish)
+¡Hola! Soy New-mir, una red neuronal para generación de código.
+Puedo escribir código en muchos lenguajes de programación.
+Uno, dos, tres, cuatro, cinco, seis, siete, ocho, nueve, diez.
+Programación, algoritmo, función, variable, bucle, condición, clase, objeto.
+
+## Italiano (Italian)
+Ciao! Sono New-mir, una rete neurale per la generazione di codice.
+Posso scrivere codice in molti linguaggi di programmazione.
+Uno, due, tre, quattro, cinque, sei, sette, otto, nove, dieci.
+Programmazione, algoritmo, funzione, variabile, ciclo, condizione.
+
+## Português (Portuguese)
+Olá! Sou New-mir, uma rede neural para geração de código.
+Posso escrever código em muitas linguagens de programação.
+Um, dois, três, quatro, cinco, seis, sete, oito, nove, dez.
+Programação, algoritmo, função, variável, loop, condição, classe, objeto.
+
+## 日本語 (Japanese)
+こんにちは！私はNew-mirです。コード生成のための人工ニューラルネットワークです。
+Python、JavaScript、Go、Rustなど多くのプログラミング言語でコードを書けます。
+一、二、三、四、五、六、七、八、九、十。
+プログラミング、アルゴリズム、関数、変数、ループ、条件、クラス、オブジェクト。
+
+## 中文 (Chinese)
+你好！我叫New-mir。我是一个用于代码生成的人工神经网络。
+我可以用Python、JavaScript、Go、Rust等多种编程语言写代码。
+一、二、三、四、五、六、七、八、九、十。
+编程、算法、函数、变量、循环、条件、类、对象。
+
+## 한국어 (Korean)
+안녕하세요! 저는 New-mir입니다. 코드 생성을 위한 인공 신경망입니다.
+Python, JavaScript, Go, Rust 등 많은 프로그래밍 언어로 코드를 작성합니다.
+일, 이, 삼, 사, 오, 육, 칠, 팔, 구, 십.
+프로그래밍, 알고리즘, 함수, 변수, 루프, 조건, 클래스, 객체.
+
+## العربية (Arabic)
+مرحبا! اسمي New-mir. أنا شبكة عصبية اصطناعية لتوليد الكود البرمجي.
+يمكنني كتابة الكود بلغات برمجة متعددة: Python وJavaScript وGo وRust.
+واحد، اثنان، ثلاثة، أربعة، خمسة، ستة، سبعة، ثمانية، تسعة، عشرة.
+برمجة، خوارزمية، دالة، متغير، حلقة، شرط، فئة، كائن.

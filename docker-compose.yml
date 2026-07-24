@@ -12,7 +12,11 @@ services:
       NEW_MIR_HOST: "0.0.0.0"
       NEW_MIR_PORT: "8000"
       NEW_MIR_LOG_LEVEL: "info"
-    # Limit to 50% of 2 CPUs and 2 GB RAM — safe for any hardware
+      # HuggingFace cache — points to the persisted volume so GPT-2
+      # weights are downloaded only once and survive container restarts.
+      HF_HOME: "/app/data/models"
+      TRANSFORMERS_CACHE: "/app/data/models"
+    # Limit CPU and RAM — safe for any hardware
     deploy:
       resources:
         limits:
@@ -23,11 +27,13 @@ services:
              "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 20s
+      retries: 5
+      # 120s allows GPT-2 to download on first run before health checks start failing
+      start_period: 120s
     volumes:
-      # Persist memory cell snapshots between container restarts
-      - new_mir_data:/app/data
+      # Persists GPT-2 / HuggingFace model weights between container restarts.
+      # Seed data (data/seed/) is embedded in the image and never re-downloaded.
+      - new_mir_models:/app/data/models
 
 volumes:
-  new_mir_data:
+  new_mir_models:

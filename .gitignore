@@ -30,11 +30,23 @@ Thumbs.db
 *.log
 logs/
 
-# Data / model snapshots (too large for git)
-data/
+# Large binary / model files — never commit these
 *.pkl
-*.npz
 *.npy
+*.npz
+*.pt
+*.bin
+*.gguf
+*.safetensors
+
+# HuggingFace model cache — stays on disk, never in git
+data/models/
+
+# Downloaded / generated data — not in git
+data/downloads/
+data/cache/
+
+# data/seed/ and data/training_stats.json ARE tracked (small, essential for Docker build)
 
 # Docker
 .docker/
