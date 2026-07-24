@@ -21,10 +21,9 @@ RUN pip install --upgrade pip --quiet \
 # ---- Stage 2: runtime image ----
 FROM python:3.11-slim AS runtime
 
-LABEL org.opencontainers.image.title="New-mir Neural Code Engine"
-LABEL org.opencontainers.image.description=\
-  "Honeycomb-memory transformer for code generation. Runs offline on any Linux PC."
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.title="New-mir Neural Code Engine" \
+      org.opencontainers.image.description="Honeycomb-memory transformer for code generation. Runs offline on any Linux PC." \
+      org.opencontainers.image.version="1.1.0"
 
 # Minimal runtime libs
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
