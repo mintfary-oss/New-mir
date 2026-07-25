@@ -67,6 +67,8 @@ SEED_FILES = [
     "kimi_k2_readme.md",
     "kimi_k2_deploy.md",
     "kimi_k2_tools.md",
+    # OpenAI Cookbook — prompting, reliability techniques, LLM best practices
+    "openai_cookbook.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
