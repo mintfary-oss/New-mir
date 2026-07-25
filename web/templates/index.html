@@ -173,6 +173,14 @@
       <span id="chat-state-badge" class="chat-state idle">ожидание</span>
       <button class="btn btn-test" id="chat-test-btn" onclick="chatRunTest()" title="Запустить проверку всех возможностей модели">▶ Проверить всё</button>
       <button class="btn btn-new" onclick="chatNew()" title="Новый диалог">+ Новый</button>
+      <button class="btn" onclick="downloadProject()" title="Упаковать и скачать проект"
+        style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:.8rem;padding:6px 11px">
+        📦 Собрать ZIP
+      </button>
+      <button class="btn" onclick="switchPanelTo('project')" title="Файлы проекта"
+        style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:.8rem;padding:6px 11px">
+        📁 Проект
+      </button>
     </div>
 
     <!-- Messages -->
@@ -341,7 +349,21 @@
     <label>Prompt / Description</label>
     <textarea id="gen-prompt" placeholder="def fibonacci(n):"></textarea>
     <br>
-    <button class="btn" onclick="generateCode()">Generate ▶</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn" onclick="generateCode()">Generate ▶</button>
+      <button class="btn" onclick="downloadProject()" title="Упаковать и скачать проект"
+        style="background:transparent;border:1px solid var(--border);color:var(--muted);font-size:.82rem;padding:8px 13px">
+        📦 Собрать ZIP
+      </button>
+      <button class="btn orange" onclick="switchPanelTo('project')" title="Файлы проекта"
+        style="font-size:.82rem;padding:8px 13px">
+        📁 Проект
+      </button>
+      <button class="btn" onclick="projectToChat()" title="Открыть в чате"
+        style="border:1px solid var(--purple);background:rgba(188,140,255,.1);color:var(--purple);font-size:.82rem;padding:8px 13px">
+        💬 В чат
+      </button>
+    </div>
     <div id="gen-result" class="result" style="display:none"></div>
   </div>
 </div>
@@ -445,6 +467,30 @@
       Перетащите ZIP сюда или нажмите для выбора
     </div>
     <div id="proj-upload-status" style="margin-top:10px;font-size:.82rem;color:var(--muted)"></div>
+
+    <!-- Quick-action buttons — appear after a successful upload -->
+    <div id="proj-quick-actions" style="display:none;margin-top:16px;padding:14px;
+         background:rgba(88,166,255,.05);border:1px solid rgba(88,166,255,.2);border-radius:8px">
+      <div style="font-size:.82rem;color:var(--muted);margin-bottom:10px">
+        Проект загружен — открыть в:
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="projectToChat()"
+          style="border:1px solid var(--purple);background:rgba(188,140,255,.12);
+                 color:var(--purple);font-size:.85rem">
+          💬 Чат
+        </button>
+        <button class="btn green" onclick="projectToTrain()" style="font-size:.85rem">
+          ⬡ Обучение
+        </button>
+        <button class="btn" onclick="projectToCodeGen()" style="font-size:.85rem">
+          Code Gen →
+        </button>
+        <button class="btn orange" onclick="downloadProject()" style="font-size:.85rem">
+          ⬇ Скачать ZIP
+        </button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -670,6 +716,24 @@ function switchPanel(name) {
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
   event.target.classList.add('active');
+  if (name === 'train') loadTrainStats();
+  if (name === 'project') loadProjectTree();
+}
+
+// Programmatic panel switch — no click event required.
+// Used by project-to-chat / project-to-codegen / etc.
+function switchPanelTo(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
+  // Highlight the matching nav button (matches onclick="switchPanel('name')")
+  document.querySelectorAll('nav button').forEach(b => {
+    const oc = b.getAttribute('onclick') || '';
+    if (oc.includes("'" + name + "'") || oc.includes('"' + name + '"')) {
+      b.classList.add('active');
+    }
+  });
   if (name === 'train') loadTrainStats();
   if (name === 'project') loadProjectTree();
 }
@@ -1066,6 +1130,8 @@ async function uploadProject(input) {
     const d = await apiFetch('/api/project/upload', { method: 'POST', body: fd });
     statusEl.style.color = 'var(--green)';
     statusEl.textContent = `✓ Распаковано ${d.count} файлов`;
+    // Show quick-action buttons
+    document.getElementById('proj-quick-actions').style.display = 'block';
     // Refresh tree
     loadProjectTree();
   } catch(e) {
@@ -1094,6 +1160,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Initial stats load ───────────────────────────────────────────────────────
 window.addEventListener('load', () => loadTrainStats());
+
+// ─── Project Actions ──────────────────────────────────────────────────────────
+
+/** Download the full project as a ZIP archive. */
+function downloadProject() {
+  const a = document.createElement('a');
+  a.href = '/api/project/download';
+  a.download = 'new-mir.zip';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/** Render a file tree as indented plain text (used for Chat/CodeGen context). */
+function renderTreeText(nodes, prefix) {
+  let out = '';
+  for (const n of nodes) {
+    if (n.type === 'dir') {
+      out += prefix + n.name + '/\n';
+      if (n.children) out += renderTreeText(n.children, prefix + '  ');
+    } else {
+      out += prefix + n.name + '\n';
+    }
+  }
+  return out;
+}
+
+/**
+ * Переносит проект в Чат: получает дерево файлов и отправляет его как
+ * первое сообщение в новый диалог, чтобы можно было сразу работать с кодом.
+ */
+async function projectToChat() {
+  try {
+    const d = await apiFetch('/api/project/tree');
+    const treeText = renderTreeText(d.tree, '');
+    switchPanelTo('chat');
+    await chatEnsureSession();
+    const inp = document.getElementById('chat-input');
+    inp.value =
+      'Я загрузил проект «' + d.root + '».\n\n' +
+      'Структура файлов:\n' + treeText + '\n' +
+      'Объясни что делает этот проект и как с ним работать.';
+    await chatSend();
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+/**
+ * Переносит проект в Code Gen: подставляет структуру файлов в поле Prompt
+ * и переключает вкладку — можно сразу описывать задачу.
+ */
+async function projectToCodeGen() {
+  try {
+    const d = await apiFetch('/api/project/tree');
+    const treeText = renderTreeText(d.tree, '');
+    switchPanelTo('generate');
+    const prompt = document.getElementById('gen-prompt');
+    prompt.value =
+      '# Проект: ' + d.root + '\n' +
+      '# Структура:\n' +
+      treeText.split('\n').filter(l => l).map(l => '#   ' + l).join('\n') +
+      '\n\n# Опиши задачу:\n';
+    prompt.focus();
+    // Move cursor to end
+    prompt.selectionStart = prompt.selectionEnd = prompt.value.length;
+  } catch(e) {
+    alert('Ошибка: ' + e.message);
+  }
+}
+
+/**
+ * Переключает на вкладку Обучение и подсказывает перетащить файлы.
+ */
+function projectToTrain() {
+  switchPanelTo('train');
+  const status = document.getElementById('train-status');
+  status.style.color = 'var(--accent)';
+  status.textContent = '← Перетащи файлы проекта сюда для обучения нейросети';
+  setTimeout(() => { status.textContent = ''; status.style.color = ''; }, 6000);
+}
 </script>
 </body>
 </html>
