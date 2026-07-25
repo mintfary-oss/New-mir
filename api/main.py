@@ -942,6 +942,206 @@ async def get_chat_session(session_id: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Hardware Analysis & Auto-Optimization
+# ---------------------------------------------------------------------------
+
+# Runtime-adjustable inference settings (modified by /api/hardware/optimize).
+# Workers share memory in a single-process dev setup; in multi-worker prod
+# the values are per-process which is fine — each worker self-optimises.
+_hw_throttle_ms: int = 1
+_hw_max_tokens: int = 4096
+
+
+def _collect_hardware() -> dict[str, Any]:
+    """Collect CPU / RAM / disk metrics using only stdlib (no psutil)."""
+    import platform
+    import shutil
+
+    info: dict[str, Any] = {}
+
+    # ── Platform ──────────────────────────────────────────────────────────
+    info["platform"] = platform.system()
+    info["platform_release"] = platform.release()
+    info["python_version"] = platform.python_version()
+    info["machine"] = platform.machine()
+
+    # ── CPU ───────────────────────────────────────────────────────────────
+    cpu_count = os.cpu_count() or 1
+    info["cpu_count"] = cpu_count
+
+    # CPU model name (Linux /proc/cpuinfo)
+    cpu_model = platform.processor() or "Unknown"
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as fh:
+            for line in fh:
+                if "model name" in line:
+                    cpu_model = line.split(":", 1)[1].strip()
+                    break
+    except OSError:
+        pass
+    info["cpu_model"] = cpu_model[:72]
+
+    # Load average (POSIX only; Windows falls back to 0)
+    try:
+        load1, load5, load15 = os.getloadavg()
+    except AttributeError:
+        load1 = load5 = load15 = 0.0
+    info["cpu_load_1m"] = round(load1, 2)
+    info["cpu_load_5m"] = round(load5, 2)
+    info["cpu_load_15m"] = round(load15, 2)
+    info["cpu_load_pct"] = round(load1 / cpu_count * 100, 1)
+
+    # ── RAM ───────────────────────────────────────────────────────────────
+    ram_total_mb = ram_avail_mb = 0
+    try:
+        mem: dict[str, int] = {}
+        with open("/proc/meminfo", encoding="utf-8") as fh:
+            for line in fh:
+                parts = line.split()
+                if len(parts) >= 2:
+                    mem[parts[0].rstrip(":")] = int(parts[1])
+        ram_total_mb = mem.get("MemTotal", 0) // 1024
+        ram_avail_mb = mem.get("MemAvailable", 0) // 1024
+    except OSError:
+        pass
+    info["ram_total_mb"] = ram_total_mb
+    info["ram_available_mb"] = ram_avail_mb
+    info["ram_used_mb"] = max(ram_total_mb - ram_avail_mb, 0)
+    info["ram_used_pct"] = (
+        round((ram_total_mb - ram_avail_mb) / max(ram_total_mb, 1) * 100, 1)
+        if ram_total_mb
+        else 0.0
+    )
+
+    # ── Disk ──────────────────────────────────────────────────────────────
+    try:
+        du = shutil.disk_usage("/")
+        info["disk_total_gb"] = round(du.total / 1e9, 1)
+        info["disk_used_gb"] = round(du.used / 1e9, 1)
+        info["disk_free_gb"] = round(du.free / 1e9, 1)
+        info["disk_used_pct"] = round(du.used / max(du.total, 1) * 100, 1)
+    except OSError:
+        info["disk_total_gb"] = info["disk_used_gb"] = info["disk_free_gb"] = 0.0
+        info["disk_used_pct"] = 0.0
+
+    # ── Container limits (cgroup v2) ──────────────────────────────────────
+    mem_limit_mb = 0
+    try:
+        with open("/sys/fs/cgroup/memory.max", encoding="utf-8") as fh:
+            val = fh.read().strip()
+            if val != "max":
+                mem_limit_mb = int(val) // (1024 * 1024)
+    except OSError:
+        pass
+    info["container_mem_limit_mb"] = mem_limit_mb  # 0 = no limit
+
+    # ── Current model state ───────────────────────────────────────────────
+    info["model_params"] = _neural_gen.parameter_count
+    info["model_max_seq"] = _neural_gen._max_seq
+    info["model_embed_dim"] = _neural_gen._embed_dim
+    info["gpt2_model"] = _gpt2_gen.model_name
+    info["gpt2_params"] = _gpt2_gen.parameter_count
+    info["current_throttle_ms"] = _hw_throttle_ms
+    info["current_max_tokens"] = _hw_max_tokens
+
+    # ── Safety recommendation ─────────────────────────────────────────────
+    load_pct = info["cpu_load_pct"]
+    avail_mb = info["ram_available_mb"]
+    disk_pct = info["disk_used_pct"]
+
+    if load_pct > 80 or avail_mb < 150 or disk_pct > 95:
+        mode = "safe"
+        rec_throttle = 15
+        rec_tokens = 128
+        rec_seq = 128
+        status = "Критическая нагрузка — безопасный режим"
+        status_level = "critical"
+    elif load_pct > 55 or avail_mb < 400 or disk_pct > 85:
+        mode = "balanced"
+        rec_throttle = 5
+        rec_tokens = 512
+        rec_seq = 256
+        status = "Умеренная нагрузка — сбалансированный режим"
+        status_level = "warn"
+    else:
+        mode = "performance"
+        rec_throttle = 1
+        rec_tokens = 4096
+        rec_seq = 512
+        status = "Нагрузка в норме — режим максимальной производительности"
+        status_level = "ok"
+
+    info["safety_mode"] = mode
+    info["status"] = status
+    info["status_level"] = status_level
+    info["recommended_throttle_ms"] = rec_throttle
+    info["recommended_max_tokens"] = rec_tokens
+    info["recommended_max_seq"] = rec_seq
+
+    return info
+
+
+@app.get("/api/hardware", tags=["System"])
+async def hardware_info() -> dict[str, Any]:
+    """
+    Return CPU, RAM, disk metrics plus a safety-mode recommendation.
+
+    The recommendation picks one of three modes based on current load:
+
+    * **performance** — CPU ≤ 55 %, RAM free ≥ 400 MB, disk ≤ 85 %
+    * **balanced**    — moderate load
+    * **safe**        — CPU > 80 %, RAM free < 150 MB, or disk > 95 %
+
+    Call ``POST /api/hardware/optimize`` to apply the recommendation.
+    """
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _collect_hardware)
+
+
+@app.post("/api/hardware/optimize", tags=["System"])
+async def hardware_optimize() -> dict[str, Any]:
+    """
+    Apply the hardware-based safety recommendation in-process.
+
+    Adjusts:
+    * ``_hw_throttle_ms``     — sleep between token batches (limits CPU)
+    * ``_hw_max_tokens``      — default chat / generate token budget
+    * ``_neural_gen._max_seq`` — NeuralCodeGen context window (limits RAM)
+
+    Returns the new settings and a human-readable status message.
+    """
+    global _hw_throttle_ms, _hw_max_tokens
+
+    loop = asyncio.get_event_loop()
+    hw = await loop.run_in_executor(None, _collect_hardware)
+
+    _hw_throttle_ms = hw["recommended_throttle_ms"]
+    _hw_max_tokens = hw["recommended_max_tokens"]
+    _neural_gen._max_seq = hw["recommended_max_seq"]
+
+    logger.info(
+        "Hardware optimisation applied: mode=%s throttle=%dms max_tokens=%d max_seq=%d",
+        hw["safety_mode"],
+        _hw_throttle_ms,
+        _hw_max_tokens,
+        _neural_gen._max_seq,
+    )
+
+    return {
+        "optimised": True,
+        "mode": hw["safety_mode"],
+        "status": hw["status"],
+        "status_level": hw["status_level"],
+        "throttle_ms": _hw_throttle_ms,
+        "max_tokens": _hw_max_tokens,
+        "max_seq": _neural_gen._max_seq,
+        "cpu_load_pct": hw["cpu_load_pct"],
+        "ram_available_mb": hw["ram_available_mb"],
+        "disk_used_pct": hw["disk_used_pct"],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
