@@ -69,6 +69,8 @@ SEED_FILES = [
     "kimi_k2_tools.md",
     # OpenAI Cookbook — prompting, reliability techniques, LLM best practices
     "openai_cookbook.md",
+    # Awesome Python — curated list of Python libraries and frameworks
+    "awesome_python.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
