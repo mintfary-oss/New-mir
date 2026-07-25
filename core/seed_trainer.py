@@ -77,6 +77,8 @@ SEED_FILES = [
     "pulumi_examples.md",
     # TypeScript Handbook — types, interfaces, classes, generics, modules
     "typescript_handbook.md",
+    # Russian language — dialogs, grammar, tech vocabulary, NLP training data
+    "russian_language.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).

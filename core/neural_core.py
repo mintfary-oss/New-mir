@@ -63,21 +63,31 @@ logger = logging.getLogger(__name__)
 # Hyper-parameters (nano model — fits in ~8 MB RAM)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Byte-level vocabulary (v2) — universal language support
+# ---------------------------------------------------------------------------
+# IDs 0-255 = raw UTF-8 byte values.  Every human language is representable
+# with no out-of-vocabulary tokens.  Same approach as GPT-2 and LLaMA.
+BYTE_VOCAB_SIZE = 256   # one ID per raw byte
+BYTE_PAD_ID = 256
+BYTE_UNK_ID = 257
+
+# Legacy ASCII vocab — kept only for loading old weight files.
 VOCAB_CHARS = (
     " !\"#$%&'()*+,-./0123456789:;<=>?@"
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`"
     "abcdefghijklmnopqrstuvwxyz{|}~\n\t"
 )
-VOCAB_SIZE = len(VOCAB_CHARS)  # 96
+VOCAB_SIZE = len(VOCAB_CHARS)  # 96 — legacy only
 PAD_ID = 0
 UNK_ID = 1
 
-# Default nano-model hyper-params
-DEFAULT_EMBED_DIM = 64
-DEFAULT_NUM_HEADS = 4
-DEFAULT_NUM_LAYERS = 2
-DEFAULT_FF_DIM = 256
-DEFAULT_MAX_SEQ = 512
+# Default model hyper-params — v2 (~6 M params, ~24 MB RAM, any CPU)
+DEFAULT_EMBED_DIM = 256
+DEFAULT_NUM_HEADS = 8
+DEFAULT_NUM_LAYERS = 4
+DEFAULT_FF_DIM = 1024
+DEFAULT_MAX_SEQ = 1024
 DEFAULT_TEMPERATURE = 0.8
 
 
@@ -86,8 +96,52 @@ DEFAULT_TEMPERATURE = 0.8
 # ---------------------------------------------------------------------------
 
 
+class ByteTokenizer:
+    """Byte-level tokeniser — v2 default for New-mir.
+
+    Encodes any Unicode text as raw UTF-8 bytes (IDs 0-255).
+    Russian, Chinese, Arabic, Japanese and every other human language
+    all work without any special configuration.
+
+    Vocabulary: 256 byte IDs + PAD (256) + UNK (257) = 258 total.
+    This is the same tokenisation strategy used by GPT-2 and LLaMA.
+
+    Examples
+    --------
+    ``"Привет"``  →  [208,159,209,128,208,184,208,178,208,181,209,130]
+    ``"Hello"``   →  [72, 101, 108, 108, 111]
+    ``"你好"``    →  [228,189,160,229,165,189]
+    """
+
+    PAD_ID: int = BYTE_PAD_ID   # 256
+    UNK_ID: int = BYTE_UNK_ID   # 257
+
+    @property
+    def vocab_size(self) -> int:
+        """258 = 256 raw bytes + PAD + UNK."""
+        return BYTE_VOCAB_SIZE + 2
+
+    def encode(self, text: str) -> list[int]:
+        """Encode a Unicode string to UTF-8 byte IDs (0-255)."""
+        return list(text.encode("utf-8", errors="replace"))
+
+    def decode(self, ids: list[int]) -> str:
+        """Decode byte IDs back to a Unicode string.
+
+        PAD/UNK IDs (≥256) are silently dropped.
+        """
+        raw = bytes(b for b in ids if 0 <= b <= 255)
+        return raw.decode("utf-8", errors="replace")
+
+
 class CharTokenizer:
-    """Character-level tokeniser over a fixed printable ASCII vocabulary."""
+    """Legacy ASCII tokeniser (96 printable chars).
+
+    Deprecated — use :class:`ByteTokenizer` for new code.
+    Kept only for backward compatibility when loading weight files
+    that were trained with the old ASCII vocabulary (vocab_size=98).
+    Russian and non-ASCII characters become ``?`` (UNK) in this tokeniser.
+    """
 
     def __init__(self) -> None:
         self._char2id: dict[str, int] = {ch: i + 2 for i, ch in enumerate(VOCAB_CHARS)}
@@ -97,14 +151,13 @@ class CharTokenizer:
 
     @property
     def vocab_size(self) -> int:
-        return VOCAB_SIZE + 2  # +2 for PAD and UNK
+        return VOCAB_SIZE + 2  # 98
 
     def encode(self, text: str) -> list[int]:
-        """Convert a string to a list of token IDs."""
+        """Encode — non-ASCII characters become UNK (ID=1)."""
         return [self._char2id.get(ch, UNK_ID) for ch in text]
 
     def decode(self, ids: list[int]) -> str:
-        """Convert a list of token IDs back to a string."""
         return "".join(self._id2char.get(i, "?") for i in ids)
 
 
@@ -576,7 +629,9 @@ class NeuralCodeGen:
         ff_dim: int = DEFAULT_FF_DIM,
         max_seq: int = DEFAULT_MAX_SEQ,
     ) -> None:
-        self.tokenizer = CharTokenizer()
+        # ByteTokenizer handles every language via UTF-8 byte encoding.
+        # CharTokenizer is kept only for loading old ASCII weight files.
+        self.tokenizer: ByteTokenizer | CharTokenizer = ByteTokenizer()
         self.weights: TransformerWeights | None = None
         self._embed_dim = embed_dim
         self._num_heads = num_heads
@@ -637,6 +692,10 @@ class NeuralCodeGen:
             max_seq=weights.max_seq,
         )
         gen.weights = weights
+        # Auto-detect: old ASCII weights have vocab_size ≤ 98
+        if weights.vocab_size <= 98:
+            gen.tokenizer = CharTokenizer()
+            logger.info("Legacy ASCII weights detected — using CharTokenizer")
         return gen
 
     # ------------------------------------------------------------------
@@ -694,6 +753,10 @@ class NeuralCodeGen:
             max_seq=weights.max_seq,
         )
         gen.weights = weights
+        # Auto-detect: old ASCII weights have vocab_size ≤ 98
+        if weights.vocab_size <= 98:
+            gen.tokenizer = CharTokenizer()
+            logger.info("Legacy ASCII weights detected — using CharTokenizer")
         logger.info("Weights loaded from file %s", path)
         return gen
 
@@ -764,22 +827,29 @@ class NeuralCodeGen:
                 total_loss += float(loss)
                 count += 1
 
-                # Gradient: simplified one-step SGD on the lm_head only.
-                # (Full backprop through all layers is deferred to a future
-                # training loop; this keeps the demo fast and memory-safe.)
-                #
                 # d_logits shape: (T-1, vocab_size)
                 probs = _softmax(logits)
                 probs[np.arange(len(targets)), targets] -= 1.0
                 probs /= len(targets)
 
-                # grad_lm_head = hidden.T @ d_logits → (embed_dim, vocab_size)
-                # Must use _forward_hidden (T-1, embed_dim), NOT _forward which
-                # returns logits (T-1, vocab_size) — that caused the broadcast
-                # error: (vocab_size, T-1) @ (T-1, vocab_size) ≠ (embed_dim, V)
+                # --- lm_head gradient (output projection) ---
+                # hidden shape: (T-1, embed_dim) — NOT logits, to avoid
+                # shape mismatch (vocab_size, T-1) @ (T-1, vocab_size).
                 hidden = _forward_hidden(ids[:-1], w)  # (T-1, embed_dim)
-                grad_lm = hidden.T @ probs             # (embed_dim, vocab_size) ✓
+                grad_lm = hidden.T @ probs             # (embed_dim, vocab_size)
                 w.lm_head -= learning_rate * grad_lm
+
+                # --- tok_emb gradient (input embedding layer) ---
+                # Backprop signal from lm_head into embeddings.
+                # This is essential for multilingual support: without it,
+                # byte embeddings for Russian/Chinese/etc stay at random init
+                # no matter how many epochs we train.
+                # d_hidden ≈ d_logits @ lm_head.T  →  (T-1, embed_dim)
+                d_hidden = probs @ w.lm_head.T
+                emb_lr = learning_rate * 0.5   # smaller LR for stability
+                for t_idx, tok_id in enumerate(ids[:-1]):
+                    if 0 <= tok_id < w.vocab_size:
+                        w.tok_emb[tok_id] -= emb_lr * d_hidden[t_idx]
 
                 if throttle_ms > 0:
                     time.sleep(throttle_ms / 1000.0)
