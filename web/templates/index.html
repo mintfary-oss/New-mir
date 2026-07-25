@@ -143,6 +143,69 @@
     .btn-test:disabled { opacity: .4; cursor: not-allowed; }
     .btn-new  { background: transparent !important; border: 1px solid var(--border) !important; color: var(--muted) !important; }
     .btn-new:hover { border-color: var(--accent) !important; color: var(--accent) !important; }
+
+    /* ── Hardware Panel ── */
+    .hw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .hw-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+    .hw-card .hw-lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+    .hw-card .hw-val { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+    .hw-card .hw-sub { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+    .hw-bar { height: 6px; background: var(--border); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+    .hw-bar-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+    .hw-bar-fill.ok   { background: var(--green); }
+    .hw-bar-fill.warn { background: var(--orange); }
+    .hw-bar-fill.crit { background: var(--red); }
+    .hw-mode { display: inline-flex; align-items: center; gap: 8px; padding: 7px 18px; border-radius: 20px; font-weight: 700; font-size: .9rem; margin-bottom: 18px; }
+    .hw-mode.ok   { background: rgba(63,185,80,.12); color: var(--green); border: 1px solid rgba(63,185,80,.4); }
+    .hw-mode.warn { background: rgba(240,136,62,.12); color: var(--orange); border: 1px solid rgba(240,136,62,.4); }
+    .hw-mode.crit { background: rgba(248,81,73,.12); color: var(--red); border: 1px solid rgba(248,81,73,.4); }
+    .hw-tbl { width: 100%; border-collapse: collapse; font-size: .83rem; }
+    .hw-tbl td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .hw-tbl td:first-child { color: var(--muted); width: 55%; }
+    .hw-tbl td:last-child { color: var(--text); font-weight: 600; font-family: monospace; }
+
+    /* ── How-to Modal ── */
+    .mo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.72); z-index: 9000;
+          align-items: flex-start; justify-content: center; overflow-y: auto; padding: 24px 12px; }
+    .mo.open { display: flex; }
+    .mo-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+               width: 100%; max-width: 880px; margin: auto; }
+    .mo-hdr { display: flex; align-items: center; gap: 12px; padding: 18px 22px;
+               border-bottom: 1px solid var(--border); }
+    .mo-hdr h2 { font-size: 1.1rem; color: var(--accent); flex: 1; margin: 0; }
+    .mo-close { background: none; border: none; color: var(--muted); font-size: 1.5rem;
+                 cursor: pointer; line-height: 1; padding: 2px 8px; border-radius: 4px; }
+    .mo-close:hover { color: var(--red); }
+    .mo-tabs { display: flex; gap: 2px; flex-wrap: wrap; padding: 10px 22px 0;
+                border-bottom: 1px solid var(--border); }
+    .mo-tab { background: none; border: none; color: var(--muted); font-size: .82rem;
+               padding: 8px 13px; cursor: pointer; border-bottom: 2px solid transparent;
+               margin-bottom: -1px; transition: color .15s; white-space: nowrap; }
+    .mo-tab.active, .mo-tab:hover { color: var(--accent); border-bottom-color: var(--accent); }
+    .mo-body { padding: 22px; max-height: 66vh; overflow-y: auto; }
+    .mo-sec { display: none; }
+    .mo-sec.active { display: block; }
+    .ht-h { font-size: .95rem; color: var(--accent); margin: 18px 0 7px; font-weight: 700; }
+    .ht-h:first-child { margin-top: 0; }
+    .ht-p { font-size: .84rem; color: var(--muted); line-height: 1.75; margin-bottom: 10px; }
+    .ht-p strong { color: var(--text); }
+    .ht-code { background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+                padding: 10px 14px; font-family: monospace; font-size: .79rem; color: var(--green);
+                margin-bottom: 10px; white-space: pre-wrap; word-break: break-all; }
+    .ht-tbl { width: 100%; border-collapse: collapse; font-size: .82rem; margin-bottom: 14px; }
+    .ht-tbl th { text-align: left; padding: 7px 10px; border-bottom: 2px solid var(--border);
+                  color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+    .ht-tbl td { padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .ht-tbl td:first-child { color: var(--accent); font-weight: 600; white-space: nowrap; font-size: .84rem; }
+    .ht-tbl td:last-child { color: var(--muted); font-size: .82rem; line-height: 1.6; }
+    .ht-tip { background: rgba(88,166,255,.07); border-left: 3px solid var(--accent);
+               padding: 10px 14px; margin: 12px 0; font-size: .82rem; color: var(--muted);
+               border-radius: 0 6px 6px 0; line-height: 1.65; }
+    .ht-tip strong { color: var(--accent); }
+    .ht-warn { background: rgba(248,81,73,.07); border-left: 3px solid var(--red);
+                padding: 10px 14px; margin: 12px 0; font-size: .82rem; color: var(--muted);
+                border-radius: 0 6px 6px 0; line-height: 1.65; }
+    .ht-warn strong { color: var(--red); }
   </style>
 </head>
 <body>
@@ -158,6 +221,8 @@
     <button onclick="switchPanel('qr')">QR Encode</button>
     <button onclick="switchPanel('memory')">Memory</button>
     <button onclick="switchPanel('project')" class="proj-btn">📁 Проект</button>
+    <button onclick="switchPanel('hardware')" style="border-color:#58d68d;color:#58d68d">⚙️ Железо</button>
+    <button onclick="openHowto()" style="border-color:var(--purple);color:var(--purple)">📖 Справка</button>
   </nav>
 </header>
 
@@ -495,7 +560,252 @@
 
 </div>
 
+<!-- ======================== HARDWARE ======================== -->
+<div id="panel-hardware" class="panel">
+
+  <div class="card">
+    <h2>⚙️ Анализ оборудования — безопасный режим</h2>
+    <p class="ht-p" style="margin-bottom:16px">
+      Нейросеть считывает нагрузку на <strong>CPU, RAM и диск</strong> и автоматически
+      подстраивает параметры инференса: задержку между батчами токенов (<code>throttle_ms</code>),
+      максимальный контекст (<code>max_seq</code>) и лимит токенов (<code>max_tokens</code>).
+      Это гарантирует стабильную работу при любой нагрузке на сервер.
+    </p>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
+      <button class="btn" id="hw-refresh-btn" onclick="hwRefresh()">🔍 Обновить</button>
+      <button class="btn green" id="hw-opt-btn" onclick="hwOptimize()">⚡ Оптимизировать</button>
+      <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--muted);cursor:pointer;user-select:none">
+        <input type="checkbox" id="hw-auto-cb" onchange="hwToggleAuto(this.checked)">
+        Авто каждые 10 с
+      </label>
+      <span id="hw-updated" style="font-size:.76rem;color:var(--muted);margin-left:auto"></span>
+    </div>
+
+    <div id="hw-mode-wrap" style="display:none;margin-bottom:10px">
+      <span id="hw-mode-badge" class="hw-mode ok">✓ Оптимальный режим</span>
+    </div>
+
+    <div class="hw-grid" id="hw-grid">
+      <div style="color:var(--muted);font-size:.85rem;padding:10px">
+        Нажмите «Обновить» для анализа…
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="hw-model-card" style="display:none">
+    <h2>🧠 Параметры нейросети (текущие)</h2>
+    <table class="hw-tbl" id="hw-model-tbl"></table>
+    <p style="font-size:.76rem;color:var(--muted);margin-top:12px">
+      После нажатия <strong>Оптимизировать</strong> изменения применяются
+      мгновенно без перезапуска контейнера.
+    </p>
+  </div>
+
+  <div class="card" id="hw-opt-card" style="display:none">
+    <h2>✓ Результат оптимизации</h2>
+    <div id="hw-opt-result"></div>
+  </div>
+
+</div>
+
 </main>
+
+<!-- ======================== HOW-TO MODAL ======================== -->
+<div class="mo" id="howto-modal" onclick="if(event.target===this)closeHowto()">
+<div class="mo-box">
+  <div class="mo-hdr">
+    <h2>📖 Как пользоваться New-mir</h2>
+    <button class="mo-close" onclick="closeHowto()">✕</button>
+  </div>
+  <div class="mo-tabs">
+    <button class="mo-tab active" onclick="htTab('overview',this)">Обзор</button>
+    <button class="mo-tab" onclick="htTab('chat',this)">💬 Чат</button>
+    <button class="mo-tab" onclick="htTab('train',this)">⬡ Обучение</button>
+    <button class="mo-tab" onclick="htTab('codegen',this)">Code Gen</button>
+    <button class="mo-tab" onclick="htTab('tools',this)">Утилиты</button>
+    <button class="mo-tab" onclick="htTab('project',this)">📁 Проект</button>
+    <button class="mo-tab" onclick="htTab('hardware',this)">⚙️ Железо</button>
+    <button class="mo-tab" onclick="htTab('pulumi',this)">▲ Pulumi</button>
+  </div>
+  <div class="mo-body">
+
+    <!-- OVERVIEW -->
+    <div class="mo-sec active" id="ht-overview">
+      <div class="ht-h">Что такое New-mir?</div>
+      <div class="ht-p">
+        <strong>New-mir</strong> — локальная нейросеть с веб-интерфейсом, работающая без интернета.
+        Внутри — два движка: <strong>GPT-2</strong> (124M параметров, чат) и
+        <strong>NeuralCodeGen nano</strong> (145K параметров, генерация кода).
+        Данные хранятся в «сотах-ячейках» (honeycomb memory) в виде бинарных QR-кодов.
+      </div>
+      <table class="ht-tbl">
+        <tr><th>Вкладка</th><th>Назначение</th></tr>
+        <tr><td>💬 Чат</td><td>Диалог с GPT-2 — задавай вопросы, пиши код, получай ответы на русском и английском</td></tr>
+        <tr><td>⬡ Обучение</td><td>Загрузи любые файлы — нейросеть обучится на их содержимом</td></tr>
+        <tr><td>Code Gen</td><td>Генерация кода по промпту или описанию (Python, JS, Go, Rust…)</td></tr>
+        <tr><td>Convert</td><td>Любой файл → бинарный поток (0/1)</td></tr>
+        <tr><td>Compress</td><td>Сжатие текста несколькими алгоритмами с оценкой коэффициента</td></tr>
+        <tr><td>QR Encode</td><td>Кодирование текста в QR-слоты + PNG-превью</td></tr>
+        <tr><td>Memory</td><td>Статистика honeycomb-памяти: число сот, ёмкость, QR-слоты</td></tr>
+        <tr><td>📁 Проект</td><td>Дерево файлов, скачать ZIP, загрузить свой проект</td></tr>
+        <tr><td>⚙️ Железо</td><td>Анализ CPU/RAM/Disk — авто-подстройка параметров нейросети</td></tr>
+        <tr><td>📖 Справка</td><td>Это окно</td></tr>
+      </table>
+      <div class="ht-tip"><strong>Seed-файлы:</strong> при каждом старте нейросеть автоматически обучается на 5 встроенных файлах: русский текст, многоязычный, Python, Rust и документация Pulumi.</div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="mo-sec" id="ht-chat">
+      <div class="ht-h">Вкладка 💬 Чат</div>
+      <div class="ht-p">Диалог с GPT-2 (124M параметров). Нейросеть генерирует ответ токен за токеном — текст появляется в реальном времени.</div>
+      <table class="ht-tbl">
+        <tr><th>Элемент</th><th>Описание</th></tr>
+        <tr><td>Отправить</td><td>Отправить сообщение. Горячая клавиша: <strong>Enter</strong> (Shift+Enter — перенос строки)</td></tr>
+        <tr><td>Стоп</td><td>Прервать генерацию. Состояние переходит в «на паузе»</td></tr>
+        <tr><td>Продолжить</td><td>Возобновить генерацию с места остановки</td></tr>
+        <tr><td>▶ Проверить всё</td><td>Запустить авто-тест: 4 задания (русский, английский, стихи, Python) — проверяет все возможности</td></tr>
+        <tr><td>+ Новый</td><td>Начать чистый диалог (старая история не сохраняется)</td></tr>
+        <tr><td>📦 Собрать ZIP</td><td>Скачать проект прямо из чата</td></tr>
+        <tr><td>📁 Проект</td><td>Переключиться на вкладку файлов проекта</td></tr>
+      </table>
+      <div class="ht-tip"><strong>Генерация бесконечная:</strong> нейросеть пишет до полного завершения задачи. Нажми Стоп в любой момент, потом Продолжить — и она продолжит с того же места.</div>
+    </div>
+
+    <!-- TRAIN -->
+    <div class="mo-sec" id="ht-train">
+      <div class="ht-h">Вкладка ⬡ Обучение</div>
+      <div class="ht-p">Загружай любые файлы — нейросеть обучится на текстовом содержимом и сохранит данные в honeycomb-памяти в виде бинарных QR-кодов.</div>
+      <div class="ht-h">Поддерживаемые форматы</div>
+      <div class="ht-p">
+        <strong>Код:</strong> .py .js .ts .go .rs .c .cpp .java .cs .rb .php .swift .kt .sh .lua<br>
+        <strong>Модели:</strong> .pt .bin .npz .h5 .gguf .safetensors<br>
+        <strong>Архивы:</strong> .zip .tar.gz .7z .rar<br>
+        <strong>Документы:</strong> .pdf .docx .txt .md .csv .json .yaml .xml<br>
+        <strong>Медиа:</strong> .mp4 .mp3 .wav .png .jpg — всё принимается, текст извлекается где возможно
+      </div>
+      <div class="ht-h">Процесс обучения</div>
+      <div class="ht-p">
+        1. Файл конвертируется в бинарный поток (Layer 4)<br>
+        2. Сжимается (Layer 3 — LZ4/Brotli/Zstd/GZip/лучший алгоритм)<br>
+        3. Кодируется в QR-слоты (Layer 2)<br>
+        4. Записывается в соту-ячейку honeycomb (Layer 1)<br>
+        5. Текстовое содержимое отправляется на fine-tune нейросети (1 эпоха)
+      </div>
+      <div class="ht-h">💾 Сохранение обучения</div>
+      <div class="ht-p">Нажми <strong>Сохранить обучение</strong> — веса и соты запишутся на диск (в Docker volume) и переживут перезапуск контейнера. Без сохранения данные живут только в RAM.</div>
+      <div class="ht-tip"><strong>Авто-расширение:</strong> при заполнении 70% памяти автоматически создаётся новый блок из 65 536 сот-ячеек.</div>
+    </div>
+
+    <!-- CODEGEN -->
+    <div class="mo-sec" id="ht-codegen">
+      <div class="ht-h">Вкладка Code Gen</div>
+      <div class="ht-p">Генерация кода через nano NeuralCodeGen (145K параметров) с RAG-lite — перед генерацией ищет в памяти релевантные фрагменты из обученных файлов и использует их как контекст.</div>
+      <table class="ht-tbl">
+        <tr><th>Параметр</th><th>Описание</th></tr>
+        <tr><td>Mode: Prompt</td><td>Дать начало кода — модель продолжит (например: <code>def sort_list(lst):</code>)</td></tr>
+        <tr><td>Mode: Description</td><td>Описать задачу на русском или английском — модель сгенерирует код с нуля</td></tr>
+        <tr><td>Language</td><td>Python / JavaScript / TypeScript / Go / Rust / Bash</td></tr>
+        <tr><td>Max tokens</td><td>Максимальная длина генерации (16–1024)</td></tr>
+        <tr><td>Temperature</td><td>0 = детерминированный, 1 = творческий/случайный</td></tr>
+      </table>
+      <div class="ht-code">Пример промпта:
+def fibonacci(n: int) -> list[int]:
+    """Вернуть первые n чисел Фибоначчи."""</div>
+      <div class="ht-tip"><strong>RAG-lite:</strong> если до этого ты обучил нейросеть на своих файлах, Code Gen автоматически найдёт похожие фрагменты и использует их как подсказку — код будет учитывать твой стиль и архитектуру.</div>
+    </div>
+
+    <!-- TOOLS -->
+    <div class="mo-sec" id="ht-tools">
+      <div class="ht-h">Convert — любой файл в бинарный поток</div>
+      <div class="ht-p">Перетащи или выбери файл — получишь: бинарное представление (0/1), степень сжатия, MIME-тип и текстовый превью если файл текстовый.</div>
+      <div class="ht-h">Compress — сжатие текста</div>
+      <div class="ht-p">Вставь текст → выбери hint (auto/text/binary) → получишь бинарный поток и коэффициент сжатия. Кнопка <strong>Estimate</strong> показывает сравнение всех алгоритмов без реального сжатия.</div>
+      <div class="ht-h">QR Encode — кодирование в QR-слоты</div>
+      <div class="ht-p">Текст разбивается на QR-код блоки, каждый получает уникальный ID. Первый QR-код показывается как PNG-изображение.</div>
+      <div class="ht-h">Memory — статистика памяти</div>
+      <div class="ht-p">Нажми <strong>Refresh</strong> — увидишь количество сот-ячеек в RAM, суммарный объём данных, список последних ячеек по ID.</div>
+    </div>
+
+    <!-- PROJECT -->
+    <div class="mo-sec" id="ht-project">
+      <div class="ht-h">Вкладка 📁 Проект</div>
+      <div class="ht-p">Полное управление файлами проекта на сервере.</div>
+      <table class="ht-tbl">
+        <tr><th>Кнопка</th><th>Действие</th></tr>
+        <tr><td>🔄 Обновить</td><td>Показать актуальное дерево файлов проекта</td></tr>
+        <tr><td>⬇ Скачать ZIP</td><td>Скачать весь проект архивом на компьютер</td></tr>
+        <tr><td>Загрузить ZIP</td><td>Загрузить свой проект — файлы распакуются в директорию проекта</td></tr>
+      </table>
+      <div class="ht-h">Кнопки после загрузки ZIP</div>
+      <table class="ht-tbl">
+        <tr><th>Кнопка</th><th>Что происходит</th></tr>
+        <tr><td>💬 Чат</td><td>Дерево файлов отправляется в чат первым сообщением — нейросеть объяснит проект</td></tr>
+        <tr><td>⬡ Обучение</td><td>Переход на вкладку обучения с подсказкой перетащить файлы</td></tr>
+        <tr><td>Code Gen →</td><td>Дерево файлов вставляется в поле Prompt как комментарий — можно сразу писать задачу</td></tr>
+        <tr><td>⬇ Скачать ZIP</td><td>Скачать текущий проект</td></tr>
+      </table>
+      <div class="ht-tip"><strong>Кнопки в Чате и Code Gen:</strong> 📦 Собрать ZIP скачивает проект, 📁 Проект — переход к файлам.</div>
+    </div>
+
+    <!-- HARDWARE -->
+    <div class="mo-sec" id="ht-hardware">
+      <div class="ht-h">Вкладка ⚙️ Железо — анализ оборудования</div>
+      <div class="ht-p">Нейросеть читает системные метрики и подстраивает параметры под безопасную работу без перезапуска.</div>
+      <table class="ht-tbl">
+        <tr><th>Метрика</th><th>Описание</th></tr>
+        <tr><td>CPU Load %</td><td>Средняя нагрузка за 1 минуту / число ядер × 100%</td></tr>
+        <tr><td>RAM Available</td><td>Свободная оперативная память (MemAvailable из /proc/meminfo)</td></tr>
+        <tr><td>Disk Used %</td><td>Занятое место на корневом разделе /</td></tr>
+        <tr><td>Container RAM</td><td>Лимит памяти Docker-контейнера (из cgroup v2)</td></tr>
+      </table>
+      <div class="ht-h">Режимы безопасности</div>
+      <table class="ht-tbl">
+        <tr><th>Режим</th><th>Условие</th><th>throttle_ms</th><th>max_tokens</th><th>max_seq</th></tr>
+        <tr><td>✓ Оптимальный</td><td>CPU ≤ 55%, RAM ≥ 400 MB, диск ≤ 85%</td><td>1 мс</td><td>4096</td><td>512</td></tr>
+        <tr><td>⚡ Сбалансированный</td><td>CPU 55–80% или RAM 150–400 MB</td><td>5 мс</td><td>512</td><td>256</td></tr>
+        <tr><td>⚠️ Безопасный</td><td>CPU > 80% или RAM < 150 MB или диск > 95%</td><td>15 мс</td><td>128</td><td>128</td></tr>
+      </table>
+      <div class="ht-tip"><strong>Авто-обновление:</strong> включи чекбокс «Авто каждые 10 с» — метрики будут обновляться автоматически пока вкладка открыта.</div>
+      <div class="ht-warn"><strong>Важно:</strong> кнопка «Оптимизировать» применяет настройки только к текущему процессу-воркеру. При нескольких воркерах каждый оптимизируется независимо. Настройки сбрасываются при перезапуске контейнера.</div>
+    </div>
+
+    <!-- PULUMI -->
+    <div class="mo-sec" id="ht-pulumi">
+      <div class="ht-h">▲ New-mir и Pulumi Infrastructure as Code</div>
+      <div class="ht-p">
+        New-mir обучен на <strong>документации Pulumi</strong> (16 KB seed-файл <code>pulumi_capabilities.txt</code>).
+        Нейросеть понимает концепции Pulumi и может помочь с написанием инфраструктурного кода.
+      </div>
+      <div class="ht-h">Что умеет нейросеть по теме Pulumi</div>
+      <table class="ht-tbl">
+        <tr><th>Задача</th><th>Как попросить</th></tr>
+        <tr><td>Создать AWS S3 bucket</td><td>«Напиши Pulumi код на Python для создания S3 bucket с версионированием»</td></tr>
+        <tr><td>Деплой Lambda функции</td><td>«Pulumi TypeScript: AWS Lambda + API Gateway»</td></tr>
+        <tr><td>Kubernetes деплой</td><td>«Pulumi Python: создать Kubernetes Deployment и Service»</td></tr>
+        <tr><td>VPC и подсети</td><td>«Pulumi: создать VPC с публичной и приватной подсетью»</td></tr>
+        <tr><td>Стек и конфиг</td><td>«Как передать конфиг между Pulumi стеками?»</td></tr>
+        <tr><td>ESC Environments</td><td>«Что такое Pulumi ESC и как настроить OIDC для AWS?»</td></tr>
+        <tr><td>Импорт ресурсов</td><td>«Как импортировать существующий S3 bucket в Pulumi state?»</td></tr>
+        <tr><td>ComponentResource</td><td>«Напиши Pulumi Component для EKS кластера»</td></tr>
+      </table>
+      <div class="ht-h">Пример запроса в чат</div>
+      <div class="ht-code">Напиши Pulumi код на Python для создания:
+- S3 bucket с блокировкой публичного доступа
+- IAM роль с политикой только для чтения
+- Lambda функция которая читает из этого bucket
+Используй pulumi_aws v7.</div>
+      <div class="ht-h">Улучшение знаний Pulumi</div>
+      <div class="ht-p">
+        Загрузи в <strong>⬡ Обучение</strong> свои Pulumi программы (.py, .ts), документацию,
+        Pulumi.yaml файлы — нейросеть обучится на них и будет генерировать код в твоём стиле.
+      </div>
+      <div class="ht-tip"><strong>Совет:</strong> после обучения на своих файлах используй Code Gen с RAG-lite — модель найдёт похожий код из твоих проектов и использует его как шаблон.</div>
+    </div>
+
+  </div><!-- mo-body -->
+</div><!-- mo-box -->
+</div><!-- howto-modal -->
 
 <script>
 // ─── Chat State ───────────────────────────────────────────────────────────────
@@ -1160,6 +1470,186 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Initial stats load ───────────────────────────────────────────────────────
 window.addEventListener('load', () => loadTrainStats());
+
+// ─── Hardware Panel ───────────────────────────────────────────────────────────
+
+let _hwTimer = null;
+
+function hwBarClass(pct) {
+  return pct >= 85 ? 'crit' : pct >= 60 ? 'warn' : 'ok';
+}
+function hwValColor(pct) {
+  return pct >= 85 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : 'var(--green)';
+}
+
+function hwRenderGrid(d) {
+  const ram_used_pct = d.ram_total_mb ? Math.round((d.ram_used_mb / d.ram_total_mb) * 100) : 0;
+
+  const cards = [
+    {
+      lbl: 'CPU Load',
+      val: d.cpu_load_pct + '%',
+      sub: d.cpu_count + ' ядер · LA ' + d.cpu_load_1m + '/' + d.cpu_load_5m + '/' + d.cpu_load_15m,
+      pct: Math.min(d.cpu_load_pct, 100),
+    },
+    {
+      lbl: 'RAM свободно',
+      val: d.ram_available_mb + ' MB',
+      sub: 'Всего ' + d.ram_total_mb + ' MB · занято ' + ram_used_pct + '%',
+      pct: ram_used_pct,
+    },
+    {
+      lbl: 'Диск занято',
+      val: d.disk_used_pct + '%',
+      sub: d.disk_used_gb + ' GB из ' + d.disk_total_gb + ' GB · ' + d.disk_free_gb + ' GB свободно',
+      pct: d.disk_used_pct,
+    },
+    {
+      lbl: 'Контейнер RAM',
+      val: d.container_mem_limit_mb ? d.container_mem_limit_mb + ' MB' : 'без лимита',
+      sub: d.cpu_model || d.platform,
+      pct: d.container_mem_limit_mb
+           ? Math.round(d.ram_used_mb / d.container_mem_limit_mb * 100)
+           : ram_used_pct,
+    },
+  ];
+
+  const grid = document.getElementById('hw-grid');
+  grid.innerHTML = cards.map(c => {
+    const cls = hwBarClass(c.pct);
+    return `<div class="hw-card">
+      <div class="hw-lbl">${c.lbl}</div>
+      <div class="hw-val" style="color:${hwValColor(c.pct)}">${c.val}</div>
+      <div class="hw-sub">${c.sub}</div>
+      <div class="hw-bar"><div class="hw-bar-fill ${cls}" style="width:${Math.min(c.pct,100)}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Mode badge
+  const modeMap = {
+    performance: { cls: 'ok',   icon: '✓',  label: 'Оптимальный режим' },
+    balanced:    { cls: 'warn', icon: '⚡', label: 'Сбалансированный режим' },
+    safe:        { cls: 'crit', icon: '⚠️', label: 'Безопасный режим — нагрузка критическая' },
+  };
+  const m = modeMap[d.safety_mode] || modeMap.performance;
+  const badge = document.getElementById('hw-mode-badge');
+  badge.className = 'hw-mode ' + m.cls;
+  badge.textContent = m.icon + ' ' + d.status;
+  document.getElementById('hw-mode-wrap').style.display = 'block';
+
+  // Model settings table
+  const rows = [
+    ['Платформа', d.platform + ' ' + d.platform_release],
+    ['Python', d.python_version],
+    ['NeuralCodeGen params', (d.model_params || 0).toLocaleString()],
+    ['NeuralCodeGen max_seq', d.model_max_seq],
+    ['GPT-2 модель', d.gpt2_model],
+    ['GPT-2 params', (d.gpt2_params || 0).toLocaleString()],
+    ['throttle_ms (текущий)', d.current_throttle_ms + ' мс'],
+    ['max_tokens (текущий)', d.current_max_tokens],
+    ['Рек. throttle_ms', d.recommended_throttle_ms + ' мс'],
+    ['Рек. max_tokens', d.recommended_max_tokens],
+    ['Рек. max_seq', d.recommended_max_seq],
+  ];
+  document.getElementById('hw-model-tbl').innerHTML =
+    rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join('');
+  document.getElementById('hw-model-card').style.display = 'block';
+
+  document.getElementById('hw-updated').textContent =
+    'Обновлено ' + new Date().toLocaleTimeString();
+}
+
+async function hwRefresh() {
+  const btn = document.getElementById('hw-refresh-btn');
+  btn.disabled = true;
+  btn.textContent = '⌛ Анализ…';
+  try {
+    const d = await apiFetch('/api/hardware');
+    hwRenderGrid(d);
+  } catch(e) {
+    document.getElementById('hw-grid').innerHTML =
+      `<div style="color:var(--red);font-size:.85rem">Ошибка: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Обновить';
+  }
+}
+
+async function hwOptimize() {
+  const btn = document.getElementById('hw-opt-btn');
+  btn.disabled = true;
+  btn.textContent = '⌛ Применяю…';
+  try {
+    const d = await apiFetch('/api/hardware/optimize', { method: 'POST' });
+    // Refresh grid after optimization
+    await hwRefresh();
+    // Show result card
+    const modeColors = { performance: 'var(--green)', balanced: 'var(--orange)', safe: 'var(--red)' };
+    const color = modeColors[d.mode] || 'var(--accent)';
+    document.getElementById('hw-opt-result').innerHTML = `
+      <div style="font-size:.9rem;margin-bottom:10px;color:${color};font-weight:700">${d.status}</div>
+      <table class="hw-tbl">
+        <tr><td>Режим</td><td>${d.mode}</td></tr>
+        <tr><td>throttle_ms</td><td>${d.throttle_ms} мс</td></tr>
+        <tr><td>max_tokens</td><td>${d.max_tokens}</td></tr>
+        <tr><td>max_seq</td><td>${d.max_seq}</td></tr>
+        <tr><td>CPU Load</td><td>${d.cpu_load_pct}%</td></tr>
+        <tr><td>RAM свободно</td><td>${d.ram_available_mb} MB</td></tr>
+        <tr><td>Диск занято</td><td>${d.disk_used_pct}%</td></tr>
+      </table>`;
+    document.getElementById('hw-opt-card').style.display = 'block';
+  } catch(e) {
+    document.getElementById('hw-opt-result').innerHTML =
+      `<div style="color:var(--red)">Ошибка: ${e.message}</div>`;
+    document.getElementById('hw-opt-card').style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ Оптимизировать';
+  }
+}
+
+function hwToggleAuto(on) {
+  if (_hwTimer) { clearInterval(_hwTimer); _hwTimer = null; }
+  if (on) {
+    hwRefresh();
+    _hwTimer = setInterval(hwRefresh, 10000);
+  }
+}
+
+// Auto-refresh when switching to hardware panel
+const _origSwitchPanel = switchPanel;
+// Patch switchPanel to trigger hwRefresh
+const _patchedSwitchPanel = function(name) {
+  _origSwitchPanel.call(this, name);
+  if (name === 'hardware') hwRefresh();
+};
+// Re-assign (the nav buttons already call switchPanel by name in onclick)
+window.switchPanel = _patchedSwitchPanel;
+
+// ─── How-to Modal ─────────────────────────────────────────────────────────────
+
+function openHowto() {
+  document.getElementById('howto-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeHowto() {
+  document.getElementById('howto-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function htTab(name, btn) {
+  document.querySelectorAll('.mo-sec').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.mo-tab').forEach(b => b.classList.remove('active'));
+  const sec = document.getElementById('ht-' + name);
+  if (sec) sec.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeHowto();
+});
 
 // ─── Project Actions ──────────────────────────────────────────────────────────
 
