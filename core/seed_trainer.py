@@ -63,6 +63,10 @@ SEED_FILES = [
     "python_examples.py",
     "rust_basics.rs",
     "pulumi_capabilities.txt",
+    # Kimi-K2 by Moonshot AI — MoE architecture, deployment, tool-call guidance
+    "kimi_k2_readme.md",
+    "kimi_k2_deploy.md",
+    "kimi_k2_tools.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
