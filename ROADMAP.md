@@ -6,25 +6,25 @@
 
 ---
 
-## ТЕКУЩЕЕ СОСТОЯНИЕ (v1.x — baseline)
+## ТЕКУЩЕЕ СОСТОЯНИЕ (v2.2 — актуальное)
 
 ### Что есть сейчас
 - Transformer decoder на чистом NumPy (без PyTorch/TensorFlow)
-- ~145K параметров (embed_dim=64, 2 слоя, ff_dim=256)
-- ASCII-only токенизатор (96 символов)
+- ~6M параметров (embed_dim=256, 4 слоя, ff_dim=1024, max_seq=1024)
+- ByteTokenizer — все языки через UTF-8 байты (vocab=258)
+- AdamOptimizer с gradient clipping (max_grad_norm=5.0)
+- Полный backprop: 100% весов обучаются (lm_head, tok_emb, FF, Attention)
 - Honeycomb-память для хранения весов
 - Система seed-файлов для автообучения при старте
+- Seed-данные: 15 файлов, ~79KB русских данных
 - Docker-контейнер, веб-интерфейс
-- Seed-данные: Python, Rust, Pulumi, Kimi-K2, OpenAI Cookbook,
-  TypeScript, Awesome-Python, Rust Book
 
-### Известные проблемы
+### Открытые проблемы
 | Проблема | Причина | Критичность |
 |---|---|---|
-| Не понимает русский | ASCII токенизатор, кириллица → `???` | КРИТИЧНО |
-| Слабые ответы | Только 145K параметров, 2 слоя | ВЫСОКАЯ |
-| Обучается только lm_head | Нет backprop через embedding | ВЫСОКАЯ |
-| max_seq=512 токенов | Ограниченный контекст | СРЕДНЯЯ |
+| Мало русских данных | 79KB из желаемых 200KB+ | СРЕДНЯЯ |
+| Нет KV-cache | Каждый токен пересчитывает историю | СРЕДНЯЯ |
+| Позиционные embedding обучаемые | RoPE лучше для длинных цепочек | НИЗКАЯ |
 
 ---
 
@@ -62,59 +62,44 @@
 
 ---
 
-## ФАЗА 2: КАЧЕСТВО ОБУЧЕНИЯ (v2.1)
+## ФАЗА 2: КАЧЕСТВО ОБУЧЕНИЯ (v2.1 / v2.2) — ЗАВЕРШЕНА ✓
 
-**Срок:** следующий спринт
-**Цель:** Модель должна генерировать осмысленные ответы на русском
+**Статус:** ✅ Полностью реализовано в PR #14 (v2.1) и PR #15 (v2.2)
+**Цель была:** Модель должна генерировать осмысленные ответы на русском
 
-### 2.1 Полный backpropagation
-Сейчас обновляются только `lm_head` и `tok_emb`.
-Нужно: обновлять все веса через все слои.
+### 2.1 Полный backpropagation ✅
+Все веса обновляются:
 
 ```
-Приоритет обновления весов (от самого важного):
-1. lm_head       ← уже реализовано
-2. tok_emb       ← уже реализовано (v2.0)
-3. ff_w1, ff_w2  ← следующий шаг
-4. attn_wq/k/v/o ← после FF layers
-5. ln1_g/b, ln2_g/b ← последними
+1. lm_head           ✅ v1.x
+2. tok_emb           ✅ v2.0
+3. ff_w1/b1/w2/b2    ✅ v2.1 — через _forward_and_cache + GELU backward
+4. attn_wq/k/v/o     ✅ v2.2 — через _backward_attn_layer
 ```
 
-Реализация: добавить `_backward()` функцию в `neural_core.py` с
-полным BPTT (Backpropagation Through Time) через все Transformer блоки.
+### 2.2 Adam optimizer ✅
+Реализован `class AdamOptimizer` в `neural_core.py`:
+- Адаптивная скорость обучения (β₁=0.9, β₂=0.999)
+- Bias correction в первых шагах
+- Применяется ко всем параметрам (FF + Attention + lm_head + tok_emb)
 
-### 2.2 Adam optimizer
-Заменить SGD на Adam для более стабильного обучения:
-
-```python
-# Вместо: w.lm_head -= lr * grad
-# Использовать Adam:
-m = beta1 * m + (1 - beta1) * grad      # moment 1
-v = beta2 * v + (1 - beta2) * grad**2   # moment 2
-w -= lr * m / (sqrt(v) + eps)           # adaptive step
-```
-
-Преимущества Adam:
-- Адаптивная скорость обучения для каждого параметра
-- Устойчив к шуму в градиентах
-- Быстрее сходится на практике
-
-### 2.3 Расширение обучающих данных на русском
+### 2.3 Расширение обучающих данных на русском — частично ✅
+- [x] `russian_language.md` — 18KB: диалоги, грамматика, техвокабуляр (v2.0)
+- [x] `russian_extended.md` — 61KB: культура, наука, технологии, мотивация (v2.2)
 - [ ] Wikipedia на русском (первые 1000 статей, краткие)
-- [ ] Русские технические тексты (документация, туториалы)
 - [ ] Параллельные тексты RU-EN для понимания переводов
 - [ ] Диалоги: вопрос-ответ пары на русском
 
-Цель: ≥200KB качественного русского текста в seed.
+Итого: 79KB из желаемых 200KB+. Продолжать в Фазе 3.
 
-### 2.4 Gradient clipping
-Предотвращает "взрыв градиентов" при обучении:
-
+### 2.4 Gradient clipping ✅
+Реализован в `AdamOptimizer.update()`:
 ```python
-grad_norm = np.sqrt(sum(np.sum(g**2) for g in grads))
-if grad_norm > max_norm:
-    for g in grads:
-        g *= max_norm / grad_norm
+# max_grad_norm=5.0 — отсекает взрывной рост градиентов
+grad_norm = np.sqrt(sum(np.sum(g**2) for g in all_grads))
+if grad_norm > max_grad_norm:
+    scale = max_grad_norm / (grad_norm + 1e-8)
+    grads = {k: v * scale for k, v in grads.items()}
 ```
 
 ---
@@ -315,7 +300,9 @@ TOOLS = {
 | Версия | Параметры | RAM | Языки | Качество (subjective) |
 |---|---|---|---|---|
 | v1.x (было) | 145K | 8 MB | EN only | очень слабый |
-| **v2.0 (сейчас)** | **6M** | **24 MB** | **все (байты)** | **базовый** |
+| v2.0 | 6M | 24 MB | все (байты) | базовый |
+| v2.1 | 6M | 24 MB | все | лучше (Adam + FF backprop) |
+| **v2.2 (сейчас)** | **6M** | **24 MB** | **все** | **заметно лучше (100% backprop)** |
 | v2.5 | 6M | 24 MB | все | приемлемый |
 | v3.0 | 15M | 60 MB | RU/EN/ZH++ | хороший |
 | v4.0 | 30M | 120 MB | все | очень хороший |
@@ -356,7 +343,9 @@ New-mir — это **эффективная, честная, работающа�
 | v1.1 | 2026-07 | Per-file seed tracking, исправление gradient shape |
 | v1.2 | 2026-07 | Kimi-K2 seed data (MoE, deployment, tool-calls) |
 | v1.3 | 2026-07 | OpenAI Cookbook, Awesome-Python, Rust Book, Pulumi Examples, TypeScript Handbook |
-| **v2.0** | **2026-07** | **ByteTokenizer, 6M params, tok_emb training, Russian seed data** |
+| v2.0 | 2026-07 | ByteTokenizer, 6M params, tok_emb training, Russian seed data |
+| v2.1 | 2026-07 | AdamOptimizer, FF backprop (GELU grad), MAX_FINE_TUNE_CHARS 32KB, 5 эпох |
+| **v2.2** | **2026-07** | **Attention backprop (Q/K/V/O), gradient clipping, russian_extended.md 61KB** |
 
 ---
 
