@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -45,7 +46,13 @@ logger = logging.getLogger("new-mir.seed_trainer")
 
 _REPO_ROOT = Path(__file__).parent.parent
 _SEED_DIR = _REPO_ROOT / "data" / "seed"
-_STATS_FILE = _REPO_ROOT / "data" / "training_stats.json"
+
+# Persistent state directory.
+# In Docker, NEW_MIR_STATE_DIR points to a named volume so
+# training_stats.json survives image rebuilds.
+# In dev the variable is unset and the file lands in data/ as before.
+_STATE_DIR = Path(os.environ.get("NEW_MIR_STATE_DIR", str(_REPO_ROOT / "data")))
+_STATS_FILE = _STATE_DIR / "training_stats.json"
 
 # Master list of seed files shipped with the repository.
 # Simply add a new filename here to have it trained automatically on next start.
@@ -199,7 +206,7 @@ def run_seed_training(trainer: HoneycombTrainer) -> None:
 
     try:
         session = trainer.train_files(pairs)
-        trained_names = [f["filename"] for f in session.accepted_files]
+        trained_names = [str(f["filename"]) for f in session.accepted_files]
         logger.info(
             "Seed training complete: %d files, %d cells, %.2fs",
             len(trained_names),
