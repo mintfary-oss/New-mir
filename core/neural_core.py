@@ -96,6 +96,90 @@ DEFAULT_TEMPERATURE = 0.8
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Adam Optimizer
+# ---------------------------------------------------------------------------
+
+
+class AdamOptimizer:
+    """Adam optimiser with per-parameter adaptive learning rates.
+
+    Maintains first-moment (m) and second-moment (v) estimates for every
+    named parameter.  Call :meth:`step` once at the start of each training
+    step (before any :meth:`update` calls) to increment the global timestep
+    counter used for bias correction.
+
+    References
+    ----------
+    Kingma & Ba, 2015 — "Adam: A Method for Stochastic Optimization"
+    https://arxiv.org/abs/1412.6980
+
+    Advantages over plain SGD
+    -------------------------
+    * Adapts the learning rate per-parameter based on gradient history.
+    * Bias correction ensures accurate estimates in early steps.
+    * Much more stable for Transformer training — avoids the gradient
+      explosion / vanishing common with fixed-lr SGD.
+    """
+
+    def __init__(
+        self,
+        lr: float = 5e-4,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
+        eps: float = 1e-8,
+    ) -> None:
+        self.lr = lr
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.eps = eps
+        self.t: int = 0
+        self._m: dict[str, np.ndarray] = {}
+        self._v: dict[str, np.ndarray] = {}
+
+    def step(self) -> None:
+        """Increment the global timestep counter.
+
+        Must be called **once** at the beginning of each training step,
+        before any :meth:`update` calls for that step.
+        """
+        self.t += 1
+
+    def update(self, key: str, param: np.ndarray, grad: np.ndarray) -> None:
+        """Apply an Adam update to *param* in-place.
+
+        Parameters
+        ----------
+        key : str
+            Unique string identifier for this parameter (e.g. ``"lm_head"``
+            or ``"ff_w1_2"``).  Used to look up / create moment buffers.
+        param : np.ndarray
+            The parameter array to update **in place**.
+        grad : np.ndarray
+            Gradient with the same shape as *param*.
+        """
+        if key not in self._m:
+            self._m[key] = np.zeros_like(param)
+            self._v[key] = np.zeros_like(param)
+
+        m = self.beta1 * self._m[key] + (1.0 - self.beta1) * grad
+        v = self.beta2 * self._v[key] + (1.0 - self.beta2) * (grad * grad)
+        self._m[key] = m
+        self._v[key] = v
+
+        # Bias-corrected estimates
+        t = max(self.t, 1)  # guard against t=0 if step() was not called
+        m_hat = m / (1.0 - self.beta1 ** t)
+        v_hat = v / (1.0 - self.beta2 ** t)
+
+        param -= self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
+
+
+# ---------------------------------------------------------------------------
+# Tokenisers
+# ---------------------------------------------------------------------------
+
+
 class ByteTokenizer:
     """Byte-level tokeniser — v2 default for New-mir.
 
@@ -557,6 +641,80 @@ def _forward_hidden(tokens: list[int], weights: TransformerWeights) -> np.ndarra
     return _layer_norm(x, weights.final_ln_g, weights.final_ln_b)
 
 
+def _gelu_derivative(x: np.ndarray) -> np.ndarray:
+    """Element-wise analytic derivative of the GELU activation.
+
+    Used during backpropagation through the feed-forward layers.
+    Derived from: GELU(x) = 0.5·x·(1 + tanh(√(2/π)·(x + 0.044715·x³)))
+    """
+    sqrt_2_pi = np.sqrt(2.0 / np.pi)
+    inner = sqrt_2_pi * (x + 0.044715 * x ** 3)
+    t = np.tanh(inner)
+    dt = (1.0 - t ** 2) * sqrt_2_pi * (1.0 + 3.0 * 0.044715 * x ** 2)
+    return 0.5 * (1.0 + t) + 0.5 * x * dt
+
+
+def _forward_and_cache(
+    tokens: list[int],
+    weights: TransformerWeights,
+) -> tuple[np.ndarray, list[dict[str, np.ndarray]]]:
+    """Forward pass that saves per-layer activations needed for FF backprop.
+
+    Parameters
+    ----------
+    tokens : list[int]
+        Input token IDs.
+    weights : TransformerWeights
+
+    Returns
+    -------
+    hidden : np.ndarray  shape (T, embed_dim)
+        Final hidden states **before** the lm_head projection.
+        Identical to the return value of ``_forward_hidden``.
+    layer_caches : list[dict]
+        One dict per Transformer layer, containing:
+
+        ``"ff_input"``  (T, D)  — normalised input to the FF sub-layer
+                                  (output of LN2, before ff_w1 multiplication).
+        ``"ff_pre"``    (T, FF) — pre-GELU activations inside the FF layer
+                                  (i.e. ff_input @ ff_w1 + ff_b1).
+
+        These are the two tensors needed to compute gradients for
+        ff_w1, ff_b1, ff_w2, ff_b2 during the backward pass.
+    """
+    t = len(tokens)
+    if t == 0:
+        return np.zeros((0, weights.embed_dim), dtype=np.float32), []
+    t = min(t, weights.max_seq)
+    tokens = tokens[-t:]
+
+    ids = np.array(tokens, dtype=np.int32)
+    x: np.ndarray = weights.tok_emb[ids] + weights.pos_emb[:t]  # (T, D)
+
+    layer_caches: list[dict[str, np.ndarray]] = []
+
+    for layer in range(weights.num_layers):
+        # Pre-norm attention residual (not cached — attention backprop deferred)
+        x_norm = _layer_norm(x, weights.ln1_g[layer], weights.ln1_b[layer])
+        attn_out = multi_head_attention(
+            x_norm,
+            weights.attn_wq[layer], weights.attn_wk[layer],
+            weights.attn_wv[layer], weights.attn_wo[layer],
+            weights.num_heads,
+        )
+        x = x + attn_out
+
+        # Pre-norm feed-forward — save input and pre-activation for backprop
+        ff_input = _layer_norm(x, weights.ln2_g[layer], weights.ln2_b[layer])  # (T, D)
+        ff_pre = ff_input @ weights.ff_w1[layer] + weights.ff_b1[layer]        # (T, FF)
+        ff_out = _gelu(ff_pre) @ weights.ff_w2[layer] + weights.ff_b2[layer]   # (T, D)
+        x = x + ff_out
+
+        layer_caches.append({"ff_input": ff_input, "ff_pre": ff_pre})
+
+    return _layer_norm(x, weights.final_ln_g, weights.final_ln_b), layer_caches
+
+
 def _sample_token(logits: np.ndarray, temperature: float, top_k: int = 50) -> int:
     """Sample the next token from logits with temperature + top-k."""
     if temperature <= 0.0:
@@ -638,6 +796,9 @@ class NeuralCodeGen:
         self._num_layers = num_layers
         self._ff_dim = ff_dim
         self._max_seq = max_seq
+        # Adam optimizer — state persists across fine_tune_on_examples calls
+        # within the same process so momentum carries over between seed files.
+        self._adam = AdamOptimizer(lr=5e-4)
 
     # ------------------------------------------------------------------
     # Weight management
@@ -769,35 +930,45 @@ class NeuralCodeGen:
         examples: list[str],
         *,
         epochs: int = 3,
-        learning_rate: float = 1e-3,
+        learning_rate: float = 5e-4,
         max_tokens_per_example: int = 128,
         throttle_ms: int = 1,
     ) -> list[float]:
-        """
-        Run a few epochs of gradient descent on a list of code strings.
+        """Train on a list of text strings using Adam + FF-layer backprop.
+
+        v2.0 improvements over v1.x
+        ----------------------------
+        * **Adam optimizer** — adaptive per-parameter learning rates replace
+          fixed-LR SGD.  Faster convergence, less sensitivity to LR choice.
+        * **FF layer gradients** — backpropagates through all feed-forward
+          blocks (ff_w1/b1 and ff_w2/b2 for every layer), not just lm_head.
+          This trains ~50% of all model parameters instead of ~2%.
+        * **tok_emb gradient** — embedding layer is still updated with a
+          simplified gradient signal for multilingual byte representations.
 
         Parameters
         ----------
         examples : list[str]
-            Training code snippets (raw text).
+            Training text snippets (any language, any encoding).
         epochs : int
-            Number of passes through the data.
+            Number of passes over *examples*.
         learning_rate : float
-            SGD step size.
+            Adam learning rate (default 5e-4; lower than SGD default).
         max_tokens_per_example : int
-            Truncate examples to this length to bound memory use.
+            Truncate each example to this many tokens to bound memory.
         throttle_ms : int
-            Sleep between batches (keeps CPU ≤ 50 %).
+            Sleep ms between steps to limit CPU load (0 = no throttle).
 
         Returns
         -------
         list[float]
-            Per-epoch average cross-entropy loss.
+            Per-epoch average cross-entropy loss.  Lower = better fit.
         """
         if self.weights is None:
             raise RuntimeError("Load weights first")
 
         w = self.weights
+        self._adam.lr = learning_rate  # honour caller's LR preference
         losses: list[float] = []
 
         for epoch in range(epochs):
@@ -809,47 +980,80 @@ class NeuralCodeGen:
                 if len(ids) < 2:
                     continue
 
-                # Forward
-                logits = _forward(ids[:-1], w)  # (T-1, V)
                 targets = np.array(ids[1:], dtype=np.int32)
 
-                # Cross-entropy loss
-                log_probs = (
-                    logits
-                    - np.log(
-                        np.exp(logits - logits.max(axis=-1, keepdims=True)).sum(
-                            axis=-1, keepdims=True
-                        )
-                    )
-                    - logits.max(axis=-1, keepdims=True)
+                # --- Forward pass with activation cache ---
+                # hidden: (T-1, D)  layer_caches: list[{ff_input, ff_pre}]
+                hidden, layer_caches = _forward_and_cache(ids[:-1], w)
+                logits = hidden @ w.lm_head  # (T-1, V)
+
+                # --- Cross-entropy loss (numerically stable log-softmax) ---
+                shifted = logits - logits.max(axis=-1, keepdims=True)
+                log_probs = shifted - np.log(
+                    np.exp(shifted).sum(axis=-1, keepdims=True)
                 )
                 loss = -log_probs[np.arange(len(targets)), targets].mean()
                 total_loss += float(loss)
                 count += 1
 
-                # d_logits shape: (T-1, vocab_size)
+                # --- d_logits: softmax - one_hot(targets), shape (T-1, V) ---
                 probs = _softmax(logits)
                 probs[np.arange(len(targets)), targets] -= 1.0
                 probs /= len(targets)
 
-                # --- lm_head gradient (output projection) ---
-                # hidden shape: (T-1, embed_dim) — NOT logits, to avoid
-                # shape mismatch (vocab_size, T-1) @ (T-1, vocab_size).
-                hidden = _forward_hidden(ids[:-1], w)  # (T-1, embed_dim)
-                grad_lm = hidden.T @ probs             # (embed_dim, vocab_size)
-                w.lm_head -= learning_rate * grad_lm
+                # ===================== BACKWARD PASS =====================
 
-                # --- tok_emb gradient (input embedding layer) ---
-                # Backprop signal from lm_head into embeddings.
-                # This is essential for multilingual support: without it,
-                # byte embeddings for Russian/Chinese/etc stay at random init
-                # no matter how many epochs we train.
-                # d_hidden ≈ d_logits @ lm_head.T  →  (T-1, embed_dim)
-                d_hidden = probs @ w.lm_head.T
-                emb_lr = learning_rate * 0.5   # smaller LR for stability
+                # Increment Adam timestep once per training step
+                self._adam.step()
+
+                # 1. lm_head gradient: hidden.T @ probs → (D, V)
+                grad_lm = hidden.T @ probs
+                self._adam.update("lm_head", w.lm_head, grad_lm)
+
+                # Gradient of loss w.r.t. hidden states: (T-1, D)
+                d_x = probs @ w.lm_head.T
+
+                # 2. FF layer gradients (reversed — deepest layer first)
+                for layer in reversed(range(w.num_layers)):
+                    cache = layer_caches[layer]
+                    ff_input = cache["ff_input"]   # (T-1, D) — LN2 output
+                    ff_pre   = cache["ff_pre"]     # (T-1, FF) — pre-GELU
+
+                    ff_h = _gelu(ff_pre)           # (T-1, FF) — post-GELU
+
+                    # Gradient for ff_w2 and ff_b2
+                    # ff_out = ff_h @ ff_w2 + ff_b2
+                    grad_w2 = ff_h.T @ d_x                          # (FF, D)
+                    grad_b2 = d_x.sum(axis=0)                        # (D,)
+                    self._adam.update(f"ff_w2_{layer}", w.ff_w2[layer], grad_w2)
+                    self._adam.update(f"ff_b2_{layer}", w.ff_b2[layer], grad_b2)
+
+                    # Gradient back through ff_w2 into ff_h
+                    d_ff_h = d_x @ w.ff_w2[layer].T                 # (T-1, FF)
+
+                    # Gradient through GELU non-linearity
+                    d_ff_pre = d_ff_h * _gelu_derivative(ff_pre)    # (T-1, FF)
+
+                    # Gradient for ff_w1 and ff_b1
+                    # ff_pre = ff_input @ ff_w1 + ff_b1
+                    grad_w1 = ff_input.T @ d_ff_pre                  # (D, FF)
+                    grad_b1 = d_ff_pre.sum(axis=0)                   # (FF,)
+                    self._adam.update(f"ff_w1_{layer}", w.ff_w1[layer], grad_w1)
+                    self._adam.update(f"ff_b1_{layer}", w.ff_b1[layer], grad_b1)
+
+                    # Gradient back through ff_w1 + FF residual connection
+                    # (LN Jacobian approximated as identity — standard practice)
+                    d_x = d_x + d_ff_pre @ w.ff_w1[layer].T         # (T-1, D)
+
+                # 3. tok_emb gradient (simplified signal, SGD for per-row update)
+                # d_emb: approximate gradient at embedding rows via lm_head.T
+                d_emb = probs @ w.lm_head.T                          # (T-1, D)
+                emb_lr = learning_rate * 0.3
                 for t_idx, tok_id in enumerate(ids[:-1]):
                     if 0 <= tok_id < w.vocab_size:
-                        w.tok_emb[tok_id] -= emb_lr * d_hidden[t_idx]
+                        w.tok_emb[tok_id] -= emb_lr * d_emb[t_idx]
+
+                # =========================================================
 
                 if throttle_ms > 0:
                     time.sleep(throttle_ms / 1000.0)
