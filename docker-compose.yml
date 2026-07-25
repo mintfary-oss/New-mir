@@ -16,6 +16,11 @@ services:
       # weights are downloaded only once and survive container restarts.
       HF_HOME: "/app/data/models"
       TRANSFORMERS_CACHE: "/app/data/models"
+      # Persistent state directory — training_stats.json, saved model
+      # weights (neural_core.json) and cell snapshots (cells.json) live
+      # here.  Backed by the new_mir_state volume so they survive both
+      # container restarts AND image rebuilds.
+      NEW_MIR_STATE_DIR: "/app/data/state"
     # Limit CPU and RAM — safe for any hardware
     deploy:
       resources:
@@ -34,6 +39,11 @@ services:
       # Persists GPT-2 / HuggingFace model weights between container restarts.
       # Seed data (data/seed/) is embedded in the image and never re-downloaded.
       - new_mir_models:/app/data/models
+      # Persists training state (training_stats.json), saved neural weights
+      # (weights/neural_core.json) and cell snapshots (weights/cells.json).
+      # Unlike source code, these survive both restarts AND image rebuilds.
+      - new_mir_state:/app/data/state
 
 volumes:
   new_mir_models:
+  new_mir_state:

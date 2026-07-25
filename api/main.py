@@ -108,7 +108,12 @@ logger = logging.getLogger("new-mir.api")
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).parent.parent
-_WEIGHTS_DIR = _REPO_ROOT / "data" / "weights"
+
+# In Docker, NEW_MIR_STATE_DIR points to a named volume (new_mir_state)
+# so weights and stats survive image rebuilds.
+# In dev the variable is unset and files land in data/ as before.
+_STATE_DIR = Path(os.environ.get("NEW_MIR_STATE_DIR", str(_REPO_ROOT / "data")))
+_WEIGHTS_DIR = _STATE_DIR / "weights"
 _WEIGHTS_FILE = _WEIGHTS_DIR / "neural_core.json"
 _CELLS_FILE = _WEIGHTS_DIR / "cells.json"
 
