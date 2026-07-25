@@ -71,6 +71,8 @@ SEED_FILES = [
     "openai_cookbook.md",
     # Awesome Python — curated list of Python libraries and frameworks
     "awesome_python.md",
+    # The Rust Book — getting started, ownership, borrowing, control flow
+    "rust_book.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
