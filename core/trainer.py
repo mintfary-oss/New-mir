@@ -57,8 +57,13 @@ logger = logging.getLogger("new-mir.trainer")
 
 SHARD_CAPACITY: int = 65_536  # cells per shard
 EXPAND_THRESHOLD: float = 0.70  # create new shard when this fraction is used
-MAX_FINE_TUNE_CHARS: int = 8_192  # chars fed to fine_tune_on_examples per file
-FINE_TUNE_EPOCHS: int = 1  # epochs per file (keep fast)
+
+# Training budget per seed file.
+# v2.0 increase: 8_192 → 32_768 chars (4×), 1 → 5 epochs (5×) = 20× more exposure.
+# First docker build after upgrade: ~5-10 min (one-time).
+# Subsequent restarts: only new/pending files are re-trained.
+MAX_FINE_TUNE_CHARS: int = 32_768
+FINE_TUNE_EPOCHS: int = 5
 
 
 # ---------------------------------------------------------------------------
