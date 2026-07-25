@@ -32,6 +32,7 @@ Only files in *pending* are trained.  This means:
 
 from __future__ import annotations
 
+import fcntl
 import json
 import logging
 import os
@@ -178,6 +179,20 @@ def run_seed_training(trainer: HoneycombTrainer) -> None:
     Called automatically at startup.  Adding a new filename to
     ``SEED_FILES`` is all that is needed to trigger training on the
     next restart — no manual flag resets required.
+
+    Multi-worker safety
+    -------------------
+    When uvicorn runs with ``workers > 1`` every worker process calls this
+    function during its own ``lifespan`` startup.  Without a lock they all
+    read ``training_stats.json`` simultaneously (before any of them has
+    written it), detect the same pending files, and run duplicate training
+    sessions.
+
+    A non-blocking exclusive file lock (``fcntl.LOCK_EX | LOCK_NB``) ensures
+    that exactly one worker proceeds; all others detect the held lock and
+    return immediately.  The winning worker releases the lock after it has
+    persisted the updated ``training_stats.json``, so a later restart will
+    find an up-to-date file and skip training entirely.
     """
     from core.trainer import HoneycombTrainer  # runtime isinstance check
 
@@ -187,32 +202,56 @@ def run_seed_training(trainer: HoneycombTrainer) -> None:
         )
         return
 
-    pending = pending_seed_files()
-    if not pending:
-        trained = _get_trained_files(_load_stats())
+    # ------------------------------------------------------------------ #
+    # Acquire an exclusive non-blocking file lock.                         #
+    # Workers that cannot acquire the lock skip — the winning worker will  #
+    # update training_stats.json, so they won't see pending files next     #
+    # time around.                                                          #
+    # ------------------------------------------------------------------ #
+    _lock_path = _STATE_DIR / "seed_training.lock"
+    try:
+        _lock_path.parent.mkdir(parents=True, exist_ok=True)
+        lock_fh = _lock_path.open("w")
+        fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (BlockingIOError, OSError):
+        # Another worker holds the lock — let it handle training.
         logger.info(
-            "Seed data already up to date — %d file(s) trained, none pending.",
-            len(trained),
+            "Seed training already in progress in another worker — skipping."
         )
-        return
-
-    logger.info(
-        "New seed file(s) detected: %s — starting training…", ", ".join(pending)
-    )
-    pairs = load_seed_data(pending)
-    if not pairs:
-        logger.warning("No seed files could be read — seed training skipped.")
+        lock_fh.close()
         return
 
     try:
-        session = trainer.train_files(pairs)
-        trained_names = [str(f["filename"]) for f in session.accepted_files]
+        pending = pending_seed_files()
+        if not pending:
+            trained = _get_trained_files(_load_stats())
+            logger.info(
+                "Seed data already up to date — %d file(s) trained, none pending.",
+                len(trained),
+            )
+            return
+
         logger.info(
-            "Seed training complete: %d files, %d cells, %.2fs",
-            len(trained_names),
-            len(session.cells_written),
-            session.duration_s,
+            "New seed file(s) detected: %s — starting training…",
+            ", ".join(pending),
         )
-        _mark_files_trained(trained_names)
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Seed training failed: %s", exc)
+        pairs = load_seed_data(pending)
+        if not pairs:
+            logger.warning("No seed files could be read — seed training skipped.")
+            return
+
+        try:
+            session = trainer.train_files(pairs)
+            trained_names = [str(f["filename"]) for f in session.accepted_files]
+            logger.info(
+                "Seed training complete: %d files, %d cells, %.2fs",
+                len(trained_names),
+                len(session.cells_written),
+                session.duration_s,
+            )
+            _mark_files_trained(trained_names)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Seed training failed: %s", exc)
+    finally:
+        fcntl.flock(lock_fh, fcntl.LOCK_UN)
+        lock_fh.close()

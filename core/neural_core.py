@@ -446,6 +446,64 @@ def _forward(tokens: list[int], weights: TransformerWeights) -> np.ndarray:
     return x @ weights.lm_head  # (T, vocab_size)
 
 
+def _forward_hidden(tokens: list[int], weights: TransformerWeights) -> np.ndarray:
+    """
+    Forward pass returning the final hidden states (T, embed_dim) **before**
+    the ``lm_head`` projection.
+
+    Used by the fine-tuning gradient step so that::
+
+        grad_lm = hidden.T @ d_logits   # (embed_dim, vocab_size)  ✓
+
+    Using ``_forward`` here would give shape ``(vocab_size, T-1) @ (T-1,
+    vocab_size)`` which broadcasts to ``(vocab_size, vocab_size)`` — wrong.
+
+    Parameters
+    ----------
+    tokens : list[int]  — input token IDs (length T)
+    weights : TransformerWeights
+
+    Returns
+    -------
+    np.ndarray  shape (T, embed_dim)
+    """
+    t = len(tokens)
+    if t == 0:
+        return np.zeros((0, weights.embed_dim), dtype=np.float32)
+    t = min(t, weights.max_seq)
+    tokens = tokens[-t:]
+
+    ids = np.array(tokens, dtype=np.int32)
+    x: np.ndarray = weights.tok_emb[ids] + weights.pos_emb[:t]  # (T, D)
+
+    for layer in range(weights.num_layers):
+        # Pre-norm attention
+        x_norm = _layer_norm(x, weights.ln1_g[layer], weights.ln1_b[layer])
+        attn_out = multi_head_attention(
+            x_norm,
+            weights.attn_wq[layer],
+            weights.attn_wk[layer],
+            weights.attn_wv[layer],
+            weights.attn_wo[layer],
+            weights.num_heads,
+        )
+        x = x + attn_out
+
+        # Pre-norm feed-forward
+        x_norm = _layer_norm(x, weights.ln2_g[layer], weights.ln2_b[layer])
+        ff_out = feed_forward(
+            x_norm,
+            weights.ff_w1[layer],
+            weights.ff_b1[layer],
+            weights.ff_w2[layer],
+            weights.ff_b2[layer],
+        )
+        x = x + ff_out
+
+    # Final layer-norm — stops before lm_head, returns (T, embed_dim)
+    return _layer_norm(x, weights.final_ln_g, weights.final_ln_b)
+
+
 def _sample_token(logits: np.ndarray, temperature: float, top_k: int = 50) -> int:
     """Sample the next token from logits with temperature + top-k."""
     if temperature <= 0.0:
@@ -706,16 +764,21 @@ class NeuralCodeGen:
                 total_loss += float(loss)
                 count += 1
 
-                # Gradient: simplified one-step SGD on the lm_head only
-                # (full backprop through all layers is deferred to a future
-                # training loop; this keeps the demo fast and memory-safe)
+                # Gradient: simplified one-step SGD on the lm_head only.
+                # (Full backprop through all layers is deferred to a future
+                # training loop; this keeps the demo fast and memory-safe.)
+                #
+                # d_logits shape: (T-1, vocab_size)
                 probs = _softmax(logits)
                 probs[np.arange(len(targets)), targets] -= 1.0
                 probs /= len(targets)
 
-                # Update lm_head via last hidden state
-                hidden = _forward(ids[:-1], w)  # reuse logits as proxy
-                grad_lm = hidden.T @ probs  # (D, V)
+                # grad_lm_head = hidden.T @ d_logits → (embed_dim, vocab_size)
+                # Must use _forward_hidden (T-1, embed_dim), NOT _forward which
+                # returns logits (T-1, vocab_size) — that caused the broadcast
+                # error: (vocab_size, T-1) @ (T-1, vocab_size) ≠ (embed_dim, V)
+                hidden = _forward_hidden(ids[:-1], w)  # (T-1, embed_dim)
+                grad_lm = hidden.T @ probs             # (embed_dim, vocab_size) ✓
                 w.lm_head -= learning_rate * grad_lm
 
                 if throttle_ms > 0:
