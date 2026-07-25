@@ -73,6 +73,8 @@ SEED_FILES = [
     "awesome_python.md",
     # The Rust Book — getting started, ownership, borrowing, control flow
     "rust_book.md",
+    # Pulumi Examples — IaC patterns for AWS, EKS, Fargate, S3, Lambda (Python)
+    "pulumi_examples.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
