@@ -1,11 +1,33 @@
 """Seed Trainer
 ==============
-Loads built-in seed data (Russian, Rust, multilingual, Python examples)
-and trains the honeycomb memory on startup when seed has not been loaded yet.
+Loads built-in seed data (Russian, Rust, multilingual, Python examples,
+Pulumi) and trains the honeycomb memory on startup for any files that have
+not yet been trained.
 
 The seed data lives in ``data/seed/`` relative to the repository root.
-After a successful seed run the flag ``seed_loaded`` is written to
-``data/training_stats.json`` so subsequent restarts skip re-training.
+
+Per-file tracking (no manual flag resets needed)
+-------------------------------------------------
+Instead of a single ``seed_loaded`` boolean, we store a list of filenames
+that have already been trained in ``data/training_stats.json``::
+
+    {
+      "seed_trained_files": ["russian_intro.txt", "multilingual.txt", ...],
+      ...
+    }
+
+On every startup the trainer computes::
+
+    pending = set(SEED_FILES) - set(seed_trained_files)
+
+Only files in *pending* are trained.  This means:
+
+* Adding a new file to ``SEED_FILES`` automatically triggers training on
+  the next restart — no manual flag reset required.
+* Existing files are never re-trained unless the tracking entry is removed.
+* Old deployments that have ``seed_loaded: true`` but no
+  ``seed_trained_files`` are treated as having trained all current files
+  (backward-compatible upgrade path).
 """
 
 from __future__ import annotations
@@ -25,6 +47,8 @@ _REPO_ROOT = Path(__file__).parent.parent
 _SEED_DIR = _REPO_ROOT / "data" / "seed"
 _STATS_FILE = _REPO_ROOT / "data" / "training_stats.json"
 
+# Master list of seed files shipped with the repository.
+# Simply add a new filename here to have it trained automatically on next start.
 SEED_FILES = [
     "russian_intro.txt",
     "multilingual.txt",
@@ -33,16 +57,40 @@ SEED_FILES = [
     "pulumi_capabilities.txt",
 ]
 
+# Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
+# Used only for backward-compat migration: if an old installation has
+# ``seed_loaded: True`` but no ``seed_trained_files`` list, we assume
+# exactly these four files were already trained and nothing more.
+_LEGACY_SEED_FILES = [
+    "russian_intro.txt",
+    "multilingual.txt",
+    "python_examples.py",
+    "rust_basics.rs",
+]
+
+
+# ---------------------------------------------------------------------------
+# Stats persistence helpers
+# ---------------------------------------------------------------------------
 
 def _load_stats() -> dict[str, object]:
+    """Load ``data/training_stats.json``; return a safe default on any error."""
     try:
         if _STATS_FILE.exists():
             with _STATS_FILE.open(encoding="utf-8") as fh:
                 return json.load(fh)
     except Exception:  # noqa: BLE001,S110
         pass
-    return {"sessions": [], "total_files_ever": 0, "total_cells_ever": 0,
-            "seed_loaded": False, "seed_loaded_at": None}
+    return {
+        "sessions": [],
+        "total_files_ever": 0,
+        "total_cells_ever": 0,
+        # Legacy boolean flag (kept for backward compat reads)
+        "seed_loaded": False,
+        "seed_loaded_at": None,
+        # Per-file tracking (new)
+        "seed_trained_files": [],
+    }
 
 
 def _save_stats(stats: dict[str, object]) -> None:
@@ -54,20 +102,56 @@ def _save_stats(stats: dict[str, object]) -> None:
         logger.warning("Could not save training_stats.json: %s", exc)
 
 
-def is_seed_loaded() -> bool:
-    return bool(_load_stats().get("seed_loaded", False))
+def _get_trained_files(stats: dict[str, object]) -> set[str]:
+    """Return the set of filenames that have already been trained.
+
+    Handles backward compatibility:
+    * New format → read ``seed_trained_files`` list directly.
+    * Old format (``seed_loaded: True``, no ``seed_trained_files``) →
+      treat only the original legacy files as trained so that any newly
+      added seed files (e.g. ``pulumi_capabilities.txt``) are detected
+      as pending and trained automatically on the next restart.
+    """
+    raw = stats.get("seed_trained_files")
+    if isinstance(raw, list) and raw:
+        return set(raw)
+    # Backward compat: old boolean flag was True → only the legacy 4 files
+    # were trained; anything added later is still pending.
+    if stats.get("seed_loaded"):
+        return set(_LEGACY_SEED_FILES)
+    return set()
 
 
-def mark_seed_loaded() -> None:
+def _mark_files_trained(filenames: list[str]) -> None:
+    """Append *filenames* to the trained-files list and persist."""
     stats = _load_stats()
+    trained: set[str] = _get_trained_files(stats)
+    trained.update(filenames)
+    stats["seed_trained_files"] = sorted(trained)
+    # Keep legacy flag in sync for external tooling that may read it
     stats["seed_loaded"] = True
     stats["seed_loaded_at"] = datetime.now(tz=timezone.utc).isoformat()
     _save_stats(stats)
 
 
-def load_seed_data() -> list[tuple[str, bytes]]:
-    pairs: list[tuple[str, bytes]] = []
+# ---------------------------------------------------------------------------
+# Public helpers
+# ---------------------------------------------------------------------------
+
+def pending_seed_files() -> list[str]:
+    """Return seed filenames that exist on disk but have not been trained yet."""
+    trained = _get_trained_files(_load_stats())
+    pending: list[str] = []
     for fname in SEED_FILES:
+        if fname not in trained and (_SEED_DIR / fname).exists():
+            pending.append(fname)
+    return pending
+
+
+def load_seed_data(filenames: list[str]) -> list[tuple[str, bytes]]:
+    """Read *filenames* from ``data/seed/`` and return (name, bytes) pairs."""
+    pairs: list[tuple[str, bytes]] = []
+    for fname in filenames:
         path = _SEED_DIR / fname
         if not path.exists():
             logger.warning("Seed file not found, skipping: %s", path)
@@ -82,34 +166,46 @@ def load_seed_data() -> list[tuple[str, bytes]]:
 
 
 def run_seed_training(trainer: HoneycombTrainer) -> None:
-    """
-    Train on seed data using *trainer* (HoneycombTrainer instance).
-    No-op if seed has already been loaded.
+    """Train on any seed files that have not been trained yet.
+
+    Called automatically at startup.  Adding a new filename to
+    ``SEED_FILES`` is all that is needed to trigger training on the
+    next restart — no manual flag resets required.
     """
     from core.trainer import HoneycombTrainer  # runtime isinstance check
 
     if not isinstance(trainer, HoneycombTrainer):
-        logger.error("run_seed_training: expected HoneycombTrainer, got %s", type(trainer))
+        logger.error(
+            "run_seed_training: expected HoneycombTrainer, got %s", type(trainer)
+        )
         return
 
-    if is_seed_loaded():
-        logger.info("Seed data already loaded — skipping seed training.")
+    pending = pending_seed_files()
+    if not pending:
+        trained = _get_trained_files(_load_stats())
+        logger.info(
+            "Seed data already up to date — %d file(s) trained, none pending.",
+            len(trained),
+        )
         return
 
-    pairs = load_seed_data()
+    logger.info(
+        "New seed file(s) detected: %s — starting training…", ", ".join(pending)
+    )
+    pairs = load_seed_data(pending)
     if not pairs:
-        logger.warning("No seed files found in %s — seed training skipped.", _SEED_DIR)
+        logger.warning("No seed files could be read — seed training skipped.")
         return
 
-    logger.info("Starting seed training on %d files…", len(pairs))
     try:
         session = trainer.train_files(pairs)
+        trained_names = [f["filename"] for f in session.accepted_files]
         logger.info(
             "Seed training complete: %d files, %d cells, %.2fs",
-            len(session.accepted_files),
+            len(trained_names),
             len(session.cells_written),
             session.duration_s,
         )
-        mark_seed_loaded()
+        _mark_files_trained(trained_names)
     except Exception as exc:  # noqa: BLE001
         logger.error("Seed training failed: %s", exc)
