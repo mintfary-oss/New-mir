@@ -231,7 +231,7 @@ for t_idx, tok_id in enumerate(ids[:-1]):
 - Basic Types, Interfaces, Classes, Functions, Generics
 - Enums, Modules, Decorators, React + TypeScript
 
-### v2.0 (текущий PR)
+### v2.0 (PR #13)
 Источник: диагностика и рефакторинг кодовой базы
 - **ByteTokenizer** — поддержка всех языков через UTF-8 байты
 - **Увеличение модели**: 145K → 6M параметров
@@ -239,6 +239,23 @@ for t_idx, tok_id in enumerate(ids[:-1]):
 - **russian_language.md** — комплексные данные на русском (18KB)
 - **ROADMAP.md** — подробный план развития до v4.0
 - **CONTEXT.md** — этот файл
+
+### v2.1 (PR #14) — Adam + FF backprop + 20× данных
+- **AdamOptimizer** — адаптивный оптимизатор (Kingma & Ba 2015)
+- **FF backprop**: ff_w1/b1/w2/b2 обновляются через _forward_and_cache
+- **_gelu_derivative**: аналитический градиент GELU
+- MAX_FINE_TUNE_CHARS: 8192 → 32768 (4×)
+- FINE_TUNE_EPOCHS: 1 → 5 (5×) = итого 20× больше обучения
+- Параметров обучается: 2% → 52%
+
+### v2.2 (текущий PR)
+- **Полный attention backprop**: Q, K, V, O веса через softmax backward
+- **Gradient clipping** в Adam (max_grad_norm=5.0) — стабильное обучение
+- **_forward_and_cache** расширен: сохраняет q_h, k_h, v_h, attn, ctx
+- **_backward_attn_layer**: полная математически корректная backward через MHA
+- Параметров обучается: 52% → **100%** от всех 6M
+- **russian_extended.md** — 48KB новых русских текстов (12 разделов)
+- Итого русских данных: 79KB (31KB + 48KB)
 
 ---
 
