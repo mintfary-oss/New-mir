@@ -23,10 +23,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
+import os
 import threading
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -213,6 +217,73 @@ class HoneycombMemory:
                 count += 1
             self._evict_if_needed()
         return count
+
+    def save_to_file(self, path: str | os.PathLike[str]) -> None:
+        """Persist all cells to a JSON file on disk (atomic write).
+
+        Parameters
+        ----------
+        path:
+            Destination file, e.g. ``data/weights/cells.json``.
+        """
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        blob = self.export_json()
+        tmp = str(path) + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(blob)
+        os.replace(tmp, path)
+        logger.info(
+            "HoneycombMemory saved to file %s (%d cells, %d bytes)",
+            path,
+            self.size,
+            len(blob),
+        )
+
+    def load_from_file(self, path: str | os.PathLike[str]) -> int:
+        """Load cells from a file written by :meth:`save_to_file`.
+
+        Merges into the current pool without clearing existing cells.
+
+        Returns
+        -------
+        int
+            Number of cells loaded.
+
+        Raises
+        ------
+        FileNotFoundError
+            If *path* does not exist.
+        """
+        with open(path, encoding="utf-8") as fh:
+            data = fh.read()
+        count = self.import_json(data)
+        logger.info("HoneycombMemory loaded %d cells from file %s", count, path)
+        return count
+
+    def search_cells(self, query: str, limit: int = 5) -> list[MemoryCell]:
+        """Return up to *limit* cells whose metadata or payload contains *query*.
+
+        Used by the RAG-lite context enrichment in code generation.
+        """
+        q = query.lower()
+        matches: list[tuple[float, MemoryCell]] = []
+        with self._lock:
+            for cell in self._cells.values():
+                # Score = number of matching tokens in metadata + payload preview
+                score = 0
+                for token in q.split():
+                    meta_str = json.dumps(cell.metadata).lower()
+                    payload_preview = cell.binary_payload[:512].decode(
+                        "utf-8", errors="ignore"
+                    ).lower()
+                    if token in meta_str:
+                        score += 2
+                    if token in payload_preview:
+                        score += 1
+                if score > 0:
+                    matches.append((score, cell))
+        matches.sort(key=lambda x: x[0], reverse=True)
+        return [cell for _, cell in matches[:limit]]
 
     # ------------------------------------------------------------------
     # Private helpers
