@@ -79,6 +79,8 @@ SEED_FILES = [
     "typescript_handbook.md",
     # Russian language — dialogs, grammar, tech vocabulary, NLP training data
     "russian_language.md",
+    # Russian extended — culture, science, tech, dialogs, motivation (100KB+)
+    "russian_extended.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
