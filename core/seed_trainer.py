@@ -75,6 +75,8 @@ SEED_FILES = [
     "rust_book.md",
     # Pulumi Examples — IaC patterns for AWS, EKS, Fargate, S3, Lambda (Python)
     "pulumi_examples.md",
+    # TypeScript Handbook — types, interfaces, classes, generics, modules
+    "typescript_handbook.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
