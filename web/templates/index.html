@@ -27,6 +27,8 @@
     nav button.active, nav button:hover { border-color: var(--accent); color: var(--accent); }
     nav button.train-btn { border-color: var(--green); color: var(--green); }
     nav button.train-btn.active, nav button.train-btn:hover { background: rgba(63,185,80,.15); }
+    nav button.proj-btn { border-color: var(--orange); color: var(--orange); }
+    nav button.proj-btn.active, nav button.proj-btn:hover { background: rgba(240,136,62,.15); }
     main { max-width: 980px; margin: 28px auto; padding: 0 20px; }
     .panel { display: none; }
     .panel.active { display: block; }
@@ -89,6 +91,24 @@
     .shard-notice { background: rgba(240,136,62,.12); border: 1px solid var(--orange); border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 0.82rem; color: var(--orange); }
     .err-notice { background: rgba(248,81,73,.1); border: 1px solid var(--red); border-radius: 6px; padding: 10px 14px; margin-top: 8px; font-size: 0.8rem; color: var(--red); }
 
+    /* ── Save weights ── */
+    .save-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 14px 16px; background: rgba(63,185,80,.07); border: 1px solid rgba(63,185,80,.3); border-radius: 8px; }
+    .save-bar p { flex: 1; font-size: .8rem; color: var(--muted); margin: 0; }
+    #save-status { font-size: .8rem; color: var(--green); }
+
+    /* ── Project Panel ── */
+    .proj-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+    .proj-toolbar span { font-size: .8rem; color: var(--muted); margin-left: auto; }
+    .tree { font-family: monospace; font-size: .82rem; line-height: 1.7; max-height: 480px; overflow-y: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+    .tree-row { display: flex; align-items: center; gap: 6px; cursor: default; border-radius: 4px; padding: 1px 4px; }
+    .tree-row:hover { background: rgba(88,166,255,.08); }
+    .tree-row .tree-icon { width: 16px; text-align: center; flex-shrink: 0; }
+    .tree-row .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-row .tree-size { color: var(--muted); font-size: .72rem; white-space: nowrap; }
+    .upload-drop { border: 2px dashed var(--orange); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; color: var(--orange); font-size: .88rem; transition: background .2s; }
+    .upload-drop:hover { background: rgba(240,136,62,.08); }
+    .upload-drop input { display: none; }
+
     /* ── Chat ── */
     #panel-chat { display: none; flex-direction: column; height: calc(100vh - 120px); }
     #panel-chat.active { display: flex; }
@@ -137,6 +157,7 @@
     <button onclick="switchPanel('compress')">Compress</button>
     <button onclick="switchPanel('qr')">QR Encode</button>
     <button onclick="switchPanel('memory')">Memory</button>
+    <button onclick="switchPanel('project')" class="proj-btn">📁 Проект</button>
   </nav>
 </header>
 
@@ -267,6 +288,22 @@
     <div class="stat-row" id="train-mem-stats" style="margin-top:14px"></div>
   </div>
 
+  <!-- Save weights to disk -->
+  <div class="card">
+    <h2>💾 Сохранение обучения</h2>
+    <div class="save-bar">
+      <p>
+        Сохраняет веса нейросети и все соты-ячейки на диск постоянно.<br>
+        После сохранения обучение переживёт перезапуск контейнера —
+        при следующем старте данные загрузятся автоматически.
+      </p>
+      <button class="btn green" id="save-btn" onclick="saveWeights()">
+        💾 Сохранить обучение
+      </button>
+    </div>
+    <div id="save-status" style="margin-top:8px"></div>
+  </div>
+
 </div>
 
 <!-- ======================== CODE GENERATION ======================== -->
@@ -372,6 +409,44 @@
     <div id="mem-stats" class="stat-row" style="margin-top:14px"></div>
     <div id="mem-cells" class="result" style="display:none;margin-top:10px"></div>
   </div>
+</div>
+
+<!-- ======================== PROJECT ======================== -->
+<div id="panel-project" class="panel">
+
+  <div class="card">
+    <h2>📁 Файлы проекта</h2>
+    <div class="proj-toolbar">
+      <button class="btn" onclick="loadProjectTree()" style="font-size:.8rem;padding:6px 14px">
+        🔄 Обновить
+      </button>
+      <a id="proj-download-btn" href="/api/project/download" download="new-mir.zip">
+        <button class="btn orange" style="font-size:.8rem;padding:6px 14px">
+          ⬇ Скачать ZIP
+        </button>
+      </a>
+      <span id="proj-tree-status"></span>
+    </div>
+    <div class="tree" id="proj-tree">
+      <span style="color:var(--muted);font-size:.8rem">Нажмите «Обновить» для загрузки дерева файлов</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>⬆ Загрузить проект с ПК</h2>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">
+      Загрузите ZIP-архив — все файлы будут распакованы в проект.
+      Существующие файлы заменяются. Директории создаются автоматически.
+    </p>
+    <div class="upload-drop" id="proj-upload-drop"
+         onclick="document.getElementById('proj-upload-input').click()">
+      <input type="file" id="proj-upload-input" accept=".zip"
+             onchange="uploadProject(this)">
+      Перетащите ZIP сюда или нажмите для выбора
+    </div>
+    <div id="proj-upload-status" style="margin-top:10px;font-size:.82rem;color:var(--muted)"></div>
+  </div>
+
 </div>
 
 </main>
@@ -596,6 +671,7 @@ function switchPanel(name) {
   document.getElementById('panel-' + name).classList.add('active');
   event.target.classList.add('active');
   if (name === 'train') loadTrainStats();
+  if (name === 'project') loadProjectTree();
 }
 
 function showResult(id, content) {
@@ -911,6 +987,109 @@ tdz.addEventListener('drop', e => {
     }
   }
   renderTrainFileList();
+});
+
+// ─── Save weights ─────────────────────────────────────────────────────────────
+async function saveWeights() {
+  const btn = document.getElementById('save-btn');
+  const status = document.getElementById('save-status');
+  btn.disabled = true;
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Сохранение…';
+  try {
+    const d = await apiFetch('/api/weights/save', { method: 'POST' });
+    const wb = fmtSize(d.weights_bytes);
+    const cb = fmtSize(d.cells_bytes);
+    status.style.color = 'var(--green)';
+    status.textContent =
+      `✓ Сохранено: веса ${wb}, ${d.cells_count} сот (${cb})`;
+    setTimeout(() => { status.textContent = ''; }, 6000);
+  } catch(e) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'Ошибка: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ─── Project Tree ─────────────────────────────────────────────────────────────
+function renderTree(nodes, indent) {
+  let html = '';
+  for (const node of nodes) {
+    const pad = indent * 20;
+    if (node.type === 'dir') {
+      html += `<div class="tree-row" style="padding-left:${pad}px">
+        <span class="tree-icon">📂</span>
+        <span class="tree-name" style="color:var(--accent);font-weight:600">${node.name}/</span>
+      </div>`;
+      if (node.children && node.children.length > 0) {
+        html += renderTree(node.children, indent + 1);
+      }
+    } else {
+      const sz = node.size !== undefined ? fmtSize(node.size) : '';
+      html += `<div class="tree-row" style="padding-left:${pad}px">
+        <span class="tree-icon">📄</span>
+        <span class="tree-name">${node.name}</span>
+        <span class="tree-size">${sz}</span>
+      </div>`;
+    }
+  }
+  return html;
+}
+
+async function loadProjectTree() {
+  const treeEl = document.getElementById('proj-tree');
+  const statusEl = document.getElementById('proj-tree-status');
+  treeEl.innerHTML = '<span style="color:var(--muted)">Загрузка…</span>';
+  statusEl.textContent = '';
+  try {
+    const d = await apiFetch('/api/project/tree');
+    const html = renderTree(d.tree, 0);
+    treeEl.innerHTML = html || '<span style="color:var(--muted)">Пусто</span>';
+    const count = treeEl.querySelectorAll('.tree-row').length;
+    statusEl.textContent = `${count} элементов`;
+  } catch(e) {
+    treeEl.innerHTML = `<span style="color:var(--red)">Ошибка: ${e.message}</span>`;
+  }
+}
+
+// ─── Upload project ZIP ───────────────────────────────────────────────────────
+async function uploadProject(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('proj-upload-status');
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = `Загрузка ${file.name} (${fmtSize(file.size)})…`;
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+  try {
+    const d = await apiFetch('/api/project/upload', { method: 'POST', body: fd });
+    statusEl.style.color = 'var(--green)';
+    statusEl.textContent = `✓ Распаковано ${d.count} файлов`;
+    // Refresh tree
+    loadProjectTree();
+  } catch(e) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = 'Ошибка: ' + e.message;
+  }
+  input.value = '';
+}
+
+// ─── Drag & drop (Upload Project) ────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const upDrop = document.getElementById('proj-upload-drop');
+  if (!upDrop) return;
+  upDrop.addEventListener('dragover', e => { e.preventDefault(); upDrop.style.background = 'rgba(240,136,62,.12)'; });
+  upDrop.addEventListener('dragleave', () => { upDrop.style.background = ''; });
+  upDrop.addEventListener('drop', e => {
+    e.preventDefault(); upDrop.style.background = '';
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.name.endsWith('.zip')) return;
+    const inp = document.getElementById('proj-upload-input');
+    const dt = new DataTransfer(); dt.items.add(file);
+    inp.files = dt.files;
+    uploadProject(inp);
+  });
 });
 
 // ─── Initial stats load ───────────────────────────────────────────────────────

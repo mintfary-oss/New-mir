@@ -14,6 +14,10 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.trainer import HoneycombTrainer
 
 logger = logging.getLogger("new-mir.seed_trainer")
 
@@ -26,6 +30,7 @@ SEED_FILES = [
     "multilingual.txt",
     "python_examples.py",
     "rust_basics.rs",
+    "pulumi_capabilities.txt",
 ]
 
 
@@ -34,7 +39,7 @@ def _load_stats() -> dict[str, object]:
         if _STATS_FILE.exists():
             with _STATS_FILE.open(encoding="utf-8") as fh:
                 return json.load(fh)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001,S110
         pass
     return {"sessions": [], "total_files_ever": 0, "total_cells_ever": 0,
             "seed_loaded": False, "seed_loaded_at": None}
@@ -76,12 +81,12 @@ def load_seed_data() -> list[tuple[str, bytes]]:
     return pairs
 
 
-def run_seed_training(trainer: object) -> None:
+def run_seed_training(trainer: HoneycombTrainer) -> None:
     """
     Train on seed data using *trainer* (HoneycombTrainer instance).
     No-op if seed has already been loaded.
     """
-    from core.trainer import HoneycombTrainer  # noqa: PLC0415
+    from core.trainer import HoneycombTrainer  # runtime isinstance check
 
     if not isinstance(trainer, HoneycombTrainer):
         logger.error("run_seed_training: expected HoneycombTrainer, got %s", type(trainer))

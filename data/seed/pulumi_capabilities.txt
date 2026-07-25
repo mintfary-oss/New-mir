@@ -1,0 +1,644 @@
+# Pulumi — Infrastructure as Code Platform
+# ==========================================
+# Comprehensive reference for New-mir seed training.
+# Covers: resources, providers, CLI, ESC, Deployments, stacks, config, outputs.
+
+## What is Pulumi?
+
+Pulumi is an open-source infrastructure as code (IaC) platform that lets you
+define, deploy, and manage cloud infrastructure using general-purpose
+programming languages: Python, TypeScript, JavaScript, Go, C#, Java, and YAML.
+
+Key differences from Terraform / CloudFormation:
+- Real programming languages (loops, functions, classes, types)
+- Single CLI for all clouds (AWS, Azure, GCP, Kubernetes, 200+ providers)
+- Pulumi Cloud for state, secrets, policy, CI/CD, and insights
+- Component resources for reusable, shareable infrastructure packages
+
+---
+
+## Pulumi CLI — Essential Commands
+
+```bash
+# Project & stack management
+pulumi new aws-python           # scaffold new project from template
+pulumi stack init dev           # create a new stack named "dev"
+pulumi stack select prod        # switch to the "prod" stack
+pulumi stack ls                 # list all stacks in current project
+
+# Deploy & destroy
+pulumi up                       # preview + deploy changes
+pulumi preview                  # show what would change (dry-run)
+pulumi destroy                  # tear down all resources in the stack
+pulumi refresh                  # sync state with actual cloud state
+
+# Config & secrets
+pulumi config set aws:region us-east-1
+pulumi config set --secret db_password s3cr3t
+pulumi config get aws:region
+
+# State & imports
+pulumi stack export             # export raw state JSON
+pulumi import aws:s3/bucket:Bucket my-bucket my-bucket-name
+
+# Outputs
+pulumi stack output             # print all stack outputs
+pulumi stack output bucket_url  # print one output
+```
+
+---
+
+## Python — AWS S3 Bucket
+
+```python
+import pulumi
+import pulumi_aws as aws
+
+# Create an S3 bucket
+bucket = aws.s3.Bucket(
+    "my-bucket",
+    versioning=aws.s3.BucketVersioningArgs(enabled=True),
+    tags={"Environment": "dev", "Team": "platform"},
+)
+
+# Export the bucket name and URL
+pulumi.export("bucket_name", bucket.id)
+pulumi.export("bucket_url", bucket.website_endpoint)
+```
+
+---
+
+## Python — AWS Lambda + API Gateway
+
+```python
+import pulumi
+import pulumi_aws as aws
+
+# IAM role for Lambda
+role = aws.iam.Role(
+    "lambda-role",
+    assume_role_policy="""{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": "lambda.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+        }]
+    }""",
+)
+
+aws.iam.RolePolicyAttachment(
+    "lambda-basic",
+    role=role.name,
+    policy_arn="arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+)
+
+# Lambda function (code from local directory)
+fn = aws.lambda_.Function(
+    "my-function",
+    runtime=aws.lambda_.Runtime.PYTHON3D12,
+    code=pulumi.AssetArchive({"index.py": pulumi.StringAsset(
+        "def handler(event, context): return {'statusCode': 200, 'body': 'Hello'}"
+    )}),
+    handler="index.handler",
+    role=role.arn,
+    timeout=30,
+    memory_size=256,
+)
+
+pulumi.export("function_name", fn.name)
+pulumi.export("function_arn", fn.arn)
+```
+
+---
+
+## Python — GCP Cloud Run
+
+```python
+import pulumi
+import pulumi_gcp as gcp
+
+project = gcp.config.project
+
+# Enable Cloud Run API
+run_api = gcp.projects.Service("run-api", service="run.googleapis.com")
+
+# Deploy a Cloud Run service
+service = gcp.cloudrun.Service(
+    "hello-service",
+    location="us-central1",
+    template=gcp.cloudrun.ServiceTemplateArgs(
+        spec=gcp.cloudrun.ServiceTemplateSpecArgs(
+            containers=[gcp.cloudrun.ServiceTemplateSpecContainerArgs(
+                image="gcr.io/cloudrun/hello",
+                resources=gcp.cloudrun.ServiceTemplateSpecContainerResourcesArgs(
+                    limits={"memory": "256Mi", "cpu": "1"},
+                ),
+            )],
+        ),
+    ),
+    opts=pulumi.ResourceOptions(depends_on=[run_api]),
+)
+
+# Allow unauthenticated access
+gcp.cloudrun.IamMember(
+    "public",
+    location=service.location,
+    service=service.name,
+    role="roles/run.invoker",
+    member="allUsers",
+)
+
+pulumi.export("url", service.statuses[0].url)
+```
+
+---
+
+## Python — Azure Blob Storage
+
+```python
+import pulumi
+import pulumi_azure_native as azure
+
+# Resource group
+rg = azure.resources.ResourceGroup("rg")
+
+# Storage account
+account = azure.storage.StorageAccount(
+    "storage",
+    resource_group_name=rg.name,
+    sku=azure.storage.SkuArgs(name="Standard_LRS"),
+    kind="StorageV2",
+    enable_https_traffic_only=True,
+)
+
+# Blob container
+container = azure.storage.BlobContainer(
+    "container",
+    resource_group_name=rg.name,
+    account_name=account.name,
+    public_access="None",
+)
+
+pulumi.export("account_name", account.name)
+pulumi.export("container_name", container.name)
+```
+
+---
+
+## Python — Kubernetes Deployment
+
+```python
+import pulumi
+import pulumi_kubernetes as k8s
+
+# Namespace
+ns = k8s.core.v1.Namespace("app-ns", metadata={"name": "myapp"})
+
+# Deployment
+deployment = k8s.apps.v1.Deployment(
+    "app",
+    metadata=k8s.meta.v1.ObjectMetaArgs(namespace=ns.metadata.name),
+    spec=k8s.apps.v1.DeploymentSpecArgs(
+        replicas=3,
+        selector=k8s.meta.v1.LabelSelectorArgs(match_labels={"app": "myapp"}),
+        template=k8s.core.v1.PodTemplateSpecArgs(
+            metadata=k8s.meta.v1.ObjectMetaArgs(labels={"app": "myapp"}),
+            spec=k8s.core.v1.PodSpecArgs(
+                containers=[k8s.core.v1.ContainerArgs(
+                    name="app",
+                    image="nginx:1.25",
+                    ports=[k8s.core.v1.ContainerPortArgs(container_port=80)],
+                    resources=k8s.core.v1.ResourceRequirementsArgs(
+                        requests={"cpu": "100m", "memory": "128Mi"},
+                        limits={"cpu": "250m", "memory": "256Mi"},
+                    ),
+                )],
+            ),
+        ),
+    ),
+)
+
+# Service (LoadBalancer)
+svc = k8s.core.v1.Service(
+    "app-svc",
+    metadata=k8s.meta.v1.ObjectMetaArgs(namespace=ns.metadata.name),
+    spec=k8s.core.v1.ServiceSpecArgs(
+        type="LoadBalancer",
+        selector={"app": "myapp"},
+        ports=[k8s.core.v1.ServicePortArgs(port=80, target_port=80)],
+    ),
+)
+
+pulumi.export("service_ip", svc.status.load_balancer.ingress[0].ip)
+```
+
+---
+
+## ComponentResource — Reusable Pattern
+
+```python
+import pulumi
+import pulumi_aws as aws
+from typing import Optional
+
+class SecureBucket(pulumi.ComponentResource):
+    """S3 bucket with versioning, encryption, and public-access block."""
+
+    def __init__(
+        self,
+        name: str,
+        tags: Optional[dict[str, str]] = None,
+        opts: Optional[pulumi.ResourceOptions] = None,
+    ) -> None:
+        super().__init__("myorg:storage:SecureBucket", name, {}, opts)
+        child_opts = pulumi.ResourceOptions(parent=self)
+
+        self.bucket = aws.s3.Bucket(
+            name,
+            versioning=aws.s3.BucketVersioningArgs(enabled=True),
+            server_side_encryption_configuration=aws.s3.BucketServerSideEncryptionConfigurationArgs(
+                rule=aws.s3.BucketServerSideEncryptionConfigurationRuleArgs(
+                    apply_server_side_encryption_by_default=aws.s3.BucketServerSideEncryptionConfigurationRuleApplyServerSideEncryptionByDefaultArgs(
+                        sse_algorithm="AES256",
+                    ),
+                ),
+            ),
+            tags=tags or {},
+            opts=child_opts,
+        )
+
+        aws.s3.BucketPublicAccessBlock(
+            f"{name}-pab",
+            bucket=self.bucket.id,
+            block_public_acls=True,
+            block_public_policy=True,
+            ignore_public_acls=True,
+            restrict_public_buckets=True,
+            opts=child_opts,
+        )
+
+        self.register_outputs({"bucket_id": self.bucket.id})
+
+
+# Usage
+bucket = SecureBucket("logs", tags={"env": "prod"})
+pulumi.export("bucket_id", bucket.bucket.id)
+```
+
+---
+
+## Stack Configuration (Pulumi.dev.yaml)
+
+```yaml
+config:
+  aws:region: us-east-1
+  myapp:environment: dev
+  myapp:instance_type: t3.micro
+  myapp:db_password:
+    secure: AAABxxxxxxxxxxxxxxxxx==
+```
+
+Reading config in Python:
+
+```python
+from pulumi import Config
+
+cfg = Config()
+aws_cfg = Config("aws")
+
+env = cfg.require("environment")           # raises if missing
+instance_type = cfg.get("instance_type", "t3.micro")
+db_password = cfg.require_secret("db_password")  # Output[str], never plaintext
+
+region = aws_cfg.require("region")
+```
+
+---
+
+## Outputs and apply()
+
+```python
+import pulumi
+import pulumi_aws as aws
+
+bucket = aws.s3.Bucket("b")
+
+# Single output → apply
+url = bucket.id.apply(lambda id: f"https://{id}.s3.amazonaws.com")
+
+# Multiple outputs → Output.all
+vpc = aws.ec2.Vpc("vpc", cidr_block="10.0.0.0/16")
+subnet = aws.ec2.Subnet("subnet", vpc_id=vpc.id, cidr_block="10.0.1.0/24")
+
+info = pulumi.Output.all(vpc.id, subnet.id).apply(
+    lambda args: f"VPC={args[0]}, Subnet={args[1]}"
+)
+
+# String interpolation shortcut
+conn_str = pulumi.Output.concat("postgresql://db.", bucket.id, ".internal")
+
+pulumi.export("url", url)
+pulumi.export("info", info)
+```
+
+---
+
+## Pulumi ESC (Environments, Secrets, Configuration)
+
+ESC manages secrets and config centrally across stacks and teams.
+
+```yaml
+# esc/environments/prod.yaml
+imports:
+  - aws-oidc-prod
+
+values:
+  aws:
+    region: us-east-1
+  myapp:
+    db_host: prod-db.internal
+    db_password:
+      fn::secret: "{{ secrets.DB_PASSWORD }}"
+  environmentVariables:
+    AWS_REGION: ${aws.region}
+    DATABASE_URL: postgresql://${myapp.db_host}/appdb
+```
+
+CLI usage:
+
+```bash
+pulumi env open myorg/prod              # open environment (masked secrets)
+pulumi env run myorg/prod -- aws s3 ls  # run command with env injected
+pulumi config env add prod --stack prod # attach ESC env to a stack
+```
+
+---
+
+## Pulumi Deployments (GitHub Actions CI/CD)
+
+```yaml
+# .github/workflows/deploy.yml
+name: Pulumi Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pulumi/actions@v5
+        with:
+          command: up
+          stack-name: myorg/myapp/prod
+          cloud-url: https://api.pulumi.com
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+```
+
+---
+
+## Resource Options
+
+```python
+import pulumi
+import pulumi_aws as aws
+
+# protect: prevent accidental deletion
+db = aws.rds.Instance(
+    "prod-db",
+    instance_class="db.t3.medium",
+    engine="postgres",
+    opts=pulumi.ResourceOptions(protect=True),
+)
+
+# depends_on: explicit ordering
+cache = aws.elasticache.Cluster(
+    "cache",
+    cluster_id="my-cache",
+    engine="redis",
+    opts=pulumi.ResourceOptions(depends_on=[db]),
+)
+
+# ignore_changes: skip drift on specific fields
+instance = aws.ec2.Instance(
+    "web",
+    ami="ami-0c55b159cbfafe1f0",
+    instance_type="t3.micro",
+    opts=pulumi.ResourceOptions(ignore_changes=["ami"]),
+)
+
+# aliases: rename without replacement
+new_bucket = aws.s3.Bucket(
+    "new-name",
+    opts=pulumi.ResourceOptions(
+        aliases=[pulumi.Alias(name="old-name")]
+    ),
+)
+
+# import: bring existing resource under Pulumi management
+existing = aws.s3.Bucket(
+    "existing",
+    opts=pulumi.ResourceOptions(import_="my-existing-bucket"),
+)
+```
+
+---
+
+## Stack References (cross-stack outputs)
+
+```python
+import pulumi
+
+# Read outputs from another stack
+infra = pulumi.StackReference("myorg/infra/prod")
+
+vpc_id = infra.get_output("vpc_id")
+subnet_ids = infra.get_output("subnet_ids")
+
+import pulumi_aws as aws
+
+# Use in this stack
+instance = aws.ec2.Instance(
+    "app",
+    ami="ami-0c55b159cbfafe1f0",
+    instance_type="t3.micro",
+    subnet_id=subnet_ids.apply(lambda ids: ids[0]),
+)
+```
+
+---
+
+## Pulumi Providers
+
+Top providers and their package names (Python):
+
+| Cloud / Service   | Package               | Install                          |
+|-------------------|-----------------------|----------------------------------|
+| AWS               | pulumi_aws            | pip install pulumi-aws           |
+| Azure (native)    | pulumi_azure_native   | pip install pulumi-azure-native  |
+| Google Cloud      | pulumi_gcp            | pip install pulumi-gcp           |
+| Kubernetes        | pulumi_kubernetes     | pip install pulumi-kubernetes    |
+| AWS EKS           | pulumi_eks            | pip install pulumi-eks           |
+| AWS (AWSX)        | pulumi_awsx           | pip install pulumi-awsx          |
+| GitHub            | pulumi_github         | pip install pulumi-github        |
+| Cloudflare        | pulumi_cloudflare     | pip install pulumi-cloudflare    |
+| Datadog           | pulumi_datadog        | pip install pulumi-datadog       |
+| Helm              | pulumi_kubernetes     | (included in k8s package)        |
+| Docker            | pulumi_docker         | pip install pulumi-docker        |
+| Random            | pulumi_random         | pip install pulumi-random        |
+| TLS               | pulumi_tls            | pip install pulumi-tls           |
+
+---
+
+## Pulumi.yaml — Project File
+
+```yaml
+name: my-infrastructure
+runtime:
+  name: python
+  options:
+    virtualenv: .venv
+description: AWS infrastructure for myapp
+config:
+  pulumi:tags:
+    value:
+      project: myapp
+```
+
+---
+
+## Automation API (Python)
+
+Run Pulumi programmatically from application code:
+
+```python
+from pulumi.automation import create_or_select_stack, LocalWorkspace
+
+def pulumi_program():
+    import pulumi_aws as aws
+    bucket = aws.s3.Bucket("auto-bucket")
+    import pulumi
+    pulumi.export("bucket_id", bucket.id)
+
+stack = create_or_select_stack(
+    stack_name="dev",
+    project_name="auto-infra",
+    program=pulumi_program,
+    opts=LocalWorkspace.create(
+        env_vars={"AWS_REGION": "us-east-1"},
+    ),
+)
+
+stack.set_config("aws:region", {"value": "us-east-1"})
+
+up_result = stack.up(on_output=print)
+print(f"bucket_id = {up_result.outputs['bucket_id'].value}")
+```
+
+---
+
+## Policy as Code (CrossGuard)
+
+```python
+# policy/__main__.py
+from pulumi_policy import (
+    EnforcementLevel,
+    PolicyPack,
+    ResourceValidationPolicy,
+    ResourceValidationArgs,
+)
+
+def s3_no_public_read(args: ResourceValidationArgs, report_violation):
+    if args.resource_type == "aws:s3/bucket:Bucket":
+        acl = args.props.get("acl", "private")
+        if acl in ("public-read", "public-read-write"):
+            report_violation(
+                f"S3 bucket '{args.name}' must not be publicly readable. "
+                f"Set acl to 'private'."
+            )
+
+PolicyPack(
+    name="aws-security",
+    enforcement_level=EnforcementLevel.MANDATORY,
+    policies=[
+        ResourceValidationPolicy(
+            name="s3-no-public-read",
+            description="S3 buckets must not allow public read access.",
+            validate=s3_no_public_read,
+        ),
+    ],
+)
+```
+
+---
+
+## TypeScript — Quick Reference
+
+```typescript
+import * as pulumi from "@pulumi/pulumi";
+import * as aws from "@pulumi/aws";
+
+const bucket = new aws.s3.Bucket("my-bucket", {
+    versioning: { enabled: true },
+    tags: { Environment: "dev" },
+});
+
+// apply on Output<T>
+const url = bucket.id.apply(id => `https://${id}.s3.amazonaws.com`);
+
+// pulumi.all for multiple outputs
+const info = pulumi.all([bucket.id, bucket.arn]).apply(
+    ([id, arn]) => `id=${id} arn=${arn}`
+);
+
+export const bucketName = bucket.id;
+export const bucketUrl = url;
+```
+
+---
+
+## Go — Quick Reference
+
+```go
+package main
+
+import (
+    "github.com/pulumi/pulumi-aws/sdk/v6/go/aws/s3"
+    "github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+func main() {
+    pulumi.Run(func(ctx *pulumi.Context) error {
+        bucket, err := s3.NewBucket(ctx, "my-bucket", &s3.BucketArgs{
+            Versioning: &s3.BucketVersioningArgs{
+                Enabled: pulumi.Bool(true),
+            },
+        })
+        if err != nil {
+            return err
+        }
+        ctx.Export("bucketName", bucket.ID())
+        return nil
+    })
+}
+```
+
+---
+
+## Best Practices Summary
+
+1. Always use stack config for environment-specific values (never hardcode).
+2. Use `--secret` for passwords, API keys, and tokens.
+3. Set `protect=True` on stateful resources (databases, DNS zones).
+4. Use `aliases` when renaming resources to avoid replacement.
+5. Use `ignore_changes` for fields managed outside Pulumi (e.g. AMI IDs).
+6. Prefer ComponentResource for patterns used more than once.
+7. Use StackReference to share outputs between stacks.
+8. Store state in Pulumi Cloud (not local) for team environments.
+9. Attach ESC environments instead of duplicating config across stacks.
+10. Run `pulumi preview` in CI before `pulumi up` to catch regressions.

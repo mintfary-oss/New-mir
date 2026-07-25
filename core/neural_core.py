@@ -48,6 +48,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import time
 from typing import TYPE_CHECKING
 
@@ -578,6 +579,64 @@ class NeuralCodeGen:
             max_seq=weights.max_seq,
         )
         gen.weights = weights
+        return gen
+
+    # ------------------------------------------------------------------
+    # File-level persistence
+    # ------------------------------------------------------------------
+
+    def save_to_file(self, path: str | os.PathLike[str]) -> None:
+        """Persist model weights to a JSON file on disk (atomic write).
+
+        Trained weights survive container restarts when saved here.
+        Load back with :meth:`load_from_file`.
+
+        Parameters
+        ----------
+        path:
+            Destination file, e.g. ``data/weights/neural_core.json``.
+        """
+        if self.weights is None:
+            raise RuntimeError("No weights loaded — call load_demo_weights() first")
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        blob = json.dumps(self.weights.to_dict())
+        tmp = str(path) + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(blob)
+        os.replace(tmp, path)
+        logger.info("Weights saved to file %s (%d bytes)", path, len(blob))
+
+    @classmethod
+    def load_from_file(cls, path: str | os.PathLike[str]) -> NeuralCodeGen:
+        """Load weights from a file written by :meth:`save_to_file`.
+
+        Parameters
+        ----------
+        path:
+            Source file path.
+
+        Returns
+        -------
+        NeuralCodeGen
+            New instance with weights loaded.
+
+        Raises
+        ------
+        FileNotFoundError
+            If *path* does not exist.
+        """
+        with open(path, encoding="utf-8") as fh:
+            d = json.load(fh)
+        weights = TransformerWeights.from_dict(d)
+        gen = cls(
+            embed_dim=weights.embed_dim,
+            num_heads=weights.num_heads,
+            num_layers=weights.num_layers,
+            ff_dim=weights.ff_dim,
+            max_seq=weights.max_seq,
+        )
+        gen.weights = weights
+        logger.info("Weights loaded from file %s", path)
         return gen
 
     # ------------------------------------------------------------------
