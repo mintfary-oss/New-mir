@@ -128,7 +128,19 @@ class GPT2Backend:
                 "Install:  pip install torch transformers"
             ) from exc
 
-        logger.info("Loading GPT-2 model '%s' …", self.model_name)
+        # Auto-detect best compute device (CUDA GPU → Apple MPS → CPU)
+        from core.hw_detector import detect as _detect_hw  # lazy import
+        _hw = _detect_hw()
+        device: str = _hw.gpu_device      # "cuda", "cuda:0", "mps", or "cpu"
+        use_fp16: bool = _hw.recommended_torch_dtype == "float16"
+        dtype = torch.float16 if use_fp16 else torch.float32
+
+        logger.info(
+            "Loading GPT-2 model '%s' on device=%s dtype=%s …",
+            self.model_name,
+            device,
+            "float16" if use_fp16 else "float32",
+        )
         t0 = time.monotonic()
 
         hf_tok = AutoTokenizer.from_pretrained(self.model_name)
@@ -143,12 +155,18 @@ class GPT2Backend:
         except Exception:  # noqa: BLE001
             pass
 
+        # device_map="auto" lets transformers shard large models across
+        # multiple GPUs automatically; for CPU/MPS we move manually.
         model = AutoModelForCausalLM.from_pretrained(
             self.model_name,
-            torch_dtype=torch.float32,
+            dtype=dtype,
+            device_map="auto" if device.startswith("cuda") else None,
         )
+        if not device.startswith("cuda"):
+            model = model.to(device)
         model.eval()
 
+        self._device = device          # store for use in generate()
         self._hf_tokenizer = hf_tok
         self._model = model
         self.tokenizer = _HFTokenizerWrapper(hf_tok)
@@ -191,6 +209,7 @@ class GPT2Backend:
         import torch  # type: ignore[import-untyped]
 
         stops = stop_sequences or ["\n\n\n"]
+        device = getattr(self, "_device", "cpu")
 
         # Tokenise, truncating if necessary to leave room for new tokens
         budget = max(self._max_seq - max_new_tokens, 64)
@@ -199,7 +218,7 @@ class GPT2Backend:
             return_tensors="pt",
             truncation=True,
             max_length=budget,
-        )
+        ).to(device)  # move tokens to same device as model
         prompt_len = input_ids.shape[1]
 
         gen_kwargs: dict[str, Any] = {

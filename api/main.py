@@ -91,6 +91,7 @@ from core.gpt2_backend import GPT2Backend
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
 from core.background_trainer import BackgroundTrainer
+from core.hw_detector import detect as detect_hw
 from core.distillation import DEFAULT_DISTILL_PROMPTS, DistillationResult, run_distillation
 from core.seed_trainer import run_seed_training
 from core.trainer import HoneycombTrainer
@@ -149,6 +150,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _trainer, _chat_engine, _bg_trainer
     logger.info("Starting New-mir …")
     loop = asyncio.get_event_loop()
+
+    # Detect and log hardware summary immediately on startup
+    hw = detect_hw()
+    logger.info("Hardware: %s", hw.summary())
+    for w in hw.warnings:
+        logger.warning("HW: %s", w)
 
     # --- Load nano model weights ----------------------------------------
     # Try file-based persistence first so trained weights survive restarts.
@@ -1292,6 +1299,18 @@ async def hardware_info() -> dict[str, Any]:
     """
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, _collect_hardware)
+
+
+@app.get("/api/hardware/detected", tags=["System"])
+async def hardware_detected() -> dict[str, Any]:
+    """Return the detected hardware capabilities (CPU, RAM, GPU) from startup.
+
+    This reflects what was auto-detected when the container started:
+    GPU device, VRAM, recommended torch dtype, and worker count.
+    """
+    loop = asyncio.get_event_loop()
+    hw = await loop.run_in_executor(None, detect_hw)
+    return hw.to_dict()
 
 
 @app.post("/api/hardware/optimize", tags=["System"])
