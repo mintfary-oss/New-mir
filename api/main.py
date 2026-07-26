@@ -498,6 +498,21 @@ async def distill_stop() -> dict[str, Any]:
     return {"stopped": True}
 
 
+@app.get("/api/distill/history", tags=["Training"])
+async def distill_history(limit: int = 50) -> dict[str, Any]:
+    """Return the last *limit* completed background distillation cycles.
+
+    Each entry contains: cycle number, duration, new/replay examples,
+    average loss, buffer size, and whether weights were saved.
+
+    Most-recent cycle is listed first.
+    """
+    if _bg_trainer is None:
+        return {"cycles": [], "total": 0}
+    cycles = _bg_trainer.history(limit=limit)
+    return {"cycles": cycles, "total": _bg_trainer._cycle_count}
+
+
 # ---------------------------------------------------------------------------
 # Convert: any file → binary
 # ---------------------------------------------------------------------------

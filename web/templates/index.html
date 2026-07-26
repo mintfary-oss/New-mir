@@ -206,6 +206,28 @@
                 padding: 10px 14px; margin: 12px 0; font-size: .82rem; color: var(--muted);
                 border-radius: 0 6px 6px 0; line-height: 1.65; }
     .ht-warn strong { color: var(--red); }
+
+    /* ── Auto-Distill Panel ─────────────────────────────────────── */
+    .ad-status { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .ad-badge { padding: 5px 15px; border-radius: 20px; font-weight: 700; font-size: .88rem; }
+    .ad-badge.on  { background: rgba(63,185,80,.15); color: var(--green);  border: 1px solid rgba(63,185,80,.4); }
+    .ad-badge.off { background: rgba(139,148,158,.1); color: var(--muted); border: 1px solid var(--border); }
+    .ad-uptime { font-size: .8rem; color: var(--muted); }
+    .ad-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .ad-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; text-align: center; }
+    .ad-card .val { font-size: 1.55rem; font-weight: 700; color: var(--accent); line-height: 1.2; }
+    .ad-card .val.green  { color: var(--green); }
+    .ad-card .val.orange { color: var(--orange); }
+    .ad-card .lbl { font-size: .68rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+    .ad-chart-wrap { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 18px; }
+    .ad-chart-title { font-size: .8rem; color: var(--muted); margin-bottom: 10px; }
+    .ad-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .ad-controls label { font-size: .82rem; color: var(--muted); white-space: nowrap; }
+    .ad-tbl { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .ad-tbl th { text-align: left; padding: 7px 10px; border-bottom: 2px solid var(--border);
+                  color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; }
+    .ad-tbl td { padding: 7px 10px; border-bottom: 1px solid var(--border); font-family: monospace; }
+    .ad-tbl tr:hover td { background: rgba(88,166,255,.04); }
   </style>
 </head>
 <body>
@@ -215,6 +237,7 @@
   <nav>
     <button onclick="switchPanel('chat')" style="border-color:var(--purple);color:var(--purple)">💬 Чат</button>
     <button onclick="switchPanel('train')" class="train-btn">⬡ Обучение</button>
+    <button onclick="switchPanel('autodistill')" style="border-color:var(--purple);color:var(--purple)">🧠 Авто-обучение</button>
     <button class="active" onclick="switchPanel('generate')">Code Gen</button>
     <button onclick="switchPanel('convert')">Convert</button>
     <button onclick="switchPanel('compress')">Compress</button>
@@ -605,6 +628,87 @@
   <div class="card" id="hw-opt-card" style="display:none">
     <h2>✓ Результат оптимизации</h2>
     <div id="hw-opt-result"></div>
+  </div>
+
+</div>
+
+<!-- ======================== AUTO-DISTILL ======================== -->
+<div id="panel-autodistill" class="panel">
+
+  <div class="card">
+    <h2>🧠 Авто-обучение (GPT-2 → нано-модель)</h2>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">
+      GPT-2 автоматически генерирует примеры и обучает нано-модель каждые N секунд.
+      Replay buffer смешивает новые и старые примеры — модель не забывает прошлое.
+    </p>
+
+    <!-- Status row -->
+    <div class="ad-status">
+      <span id="ad-badge" class="ad-badge off">Остановлен</span>
+      <span id="ad-uptime" class="ad-uptime"></span>
+      <button class="btn green" id="ad-btn-toggle" onclick="adToggle()" style="padding:7px 18px;font-size:.85rem">Запустить</button>
+      <button class="btn" id="ad-btn-now" onclick="adRunNow()" style="background:var(--purple);padding:7px 14px;font-size:.85rem" title="Запустить один цикл немедленно">▶ Сейчас</button>
+      <button class="btn" onclick="adRefresh()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:6px 12px;font-size:.8rem">⟳</button>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="ad-cards">
+      <div class="ad-card"><div class="val green" id="ad-cycles">—</div><div class="lbl">Циклов выполнено</div></div>
+      <div class="ad-card"><div class="val" id="ad-buffer">—</div><div class="lbl">Примеров в буфере</div></div>
+      <div class="ad-card"><div class="val orange" id="ad-loss">—</div><div class="lbl">Последний Loss</div></div>
+      <div class="ad-card"><div class="val" id="ad-interval-val">—</div><div class="lbl">Интервал (сек)</div></div>
+      <div class="ad-card"><div class="val" id="ad-last-dur">—</div><div class="lbl">Длит. цикла (с)</div></div>
+    </div>
+
+    <!-- Loss chart -->
+    <div class="ad-chart-wrap">
+      <div class="ad-chart-title">Loss по циклам (последние 30) — чем меньше, тем лучше</div>
+      <canvas id="ad-chart" height="100" style="width:100%;display:block"></canvas>
+      <div id="ad-chart-empty" style="text-align:center;color:var(--muted);font-size:.8rem;padding:20px 0;display:none">
+        Нет данных — ждём первый цикл обучения…
+      </div>
+    </div>
+
+    <!-- Interval control -->
+    <div class="card" style="margin-bottom:0;background:rgba(88,166,255,.04);border-color:rgba(88,166,255,.2)">
+      <h2 style="font-size:.9rem;margin-bottom:10px">Настройка интервала</h2>
+      <div class="ad-controls">
+        <label>Запускать каждые:</label>
+        <input type="number" id="ad-interval-input" min="10" max="86400" value="1800"
+               style="width:100px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:6px;font-size:.85rem">
+        <span style="font-size:.82rem;color:var(--muted)">секунд</span>
+        <button class="btn" onclick="adSetInterval()" style="padding:7px 16px;font-size:.85rem">Применить</button>
+        <span style="font-size:.78rem;color:var(--muted);margin-left:4px">
+          60 = каждую минуту &nbsp;·&nbsp; 300 = 5 мин &nbsp;·&nbsp; 1800 = 30 мин
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- History table -->
+  <div class="card">
+    <h2>История циклов обучения</h2>
+    <div style="overflow-x:auto">
+      <table class="ad-tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Время</th>
+            <th>Длит.</th>
+            <th>Новых</th>
+            <th>Replay</th>
+            <th>Loss</th>
+            <th>Буфер</th>
+            <th>Сохр.</th>
+          </tr>
+        </thead>
+        <tbody id="ad-history-body">
+          <tr><td colspan="8" style="color:var(--muted);text-align:center;padding:24px">
+            Нет данных — ждём первый цикл…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
 </div>
@@ -1028,6 +1132,7 @@ function switchPanel(name) {
   event.target.classList.add('active');
   if (name === 'train') loadTrainStats();
   if (name === 'project') loadProjectTree();
+  if (name === 'autodistill') { adRefresh(); adStartAutoRefresh(); } else { adStopAutoRefresh(); }
 }
 
 // Programmatic panel switch — no click event required.
@@ -1730,6 +1835,240 @@ function projectToTrain() {
   status.style.color = 'var(--accent)';
   status.textContent = '← Перетащи файлы проекта сюда для обучения нейросети';
   setTimeout(() => { status.textContent = ''; status.style.color = ''; }, 6000);
+}
+
+// ─── Auto-Distill Panel ────────────────────────────────────────────────────
+
+let _adRefreshTimer = null;
+
+function adStartAutoRefresh() {
+  adStopAutoRefresh();
+  _adRefreshTimer = setInterval(adRefresh, 5000); // обновлять каждые 5 сек
+}
+
+function adStopAutoRefresh() {
+  if (_adRefreshTimer) { clearInterval(_adRefreshTimer); _adRefreshTimer = null; }
+}
+
+async function adRefresh() {
+  try {
+    const [statusRes, histRes] = await Promise.all([
+      fetch('/api/distill/status'),
+      fetch('/api/distill/history?limit=30'),
+    ]);
+    const st  = await statusRes.json();
+    const his = await histRes.json();
+    adUpdateStatus(st);
+    adUpdateHistory(his.cycles || []);
+    adDrawChart(his.cycles || []);
+  } catch (e) {
+    console.warn('adRefresh error', e);
+  }
+}
+
+function adUpdateStatus(st) {
+  const badge    = document.getElementById('ad-badge');
+  const uptime   = document.getElementById('ad-uptime');
+  const cycles   = document.getElementById('ad-cycles');
+  const buffer   = document.getElementById('ad-buffer');
+  const lossEl   = document.getElementById('ad-loss');
+  const ivVal    = document.getElementById('ad-interval-val');
+  const ivInput  = document.getElementById('ad-interval-input');
+  const durEl    = document.getElementById('ad-last-dur');
+  const toggleBtn = document.getElementById('ad-btn-toggle');
+
+  const running = st.running;
+  badge.className = 'ad-badge ' + (running ? 'on' : 'off');
+  badge.textContent = running ? 'Работает' : 'Остановлен';
+
+  if (running && st.uptime_s > 0) {
+    uptime.textContent = 'Работает ' + fmtUptime(st.uptime_s);
+  } else {
+    uptime.textContent = '';
+  }
+
+  toggleBtn.textContent = running ? 'Остановить' : 'Запустить';
+  toggleBtn.style.background = running ? 'var(--red)' : 'var(--green)';
+
+  cycles.textContent = st.cycles_completed ?? '—';
+  buffer.textContent = st.buffer_size ?? '—';
+  ivVal.textContent  = st.interval_seconds ?? '—';
+  if (ivInput && st.interval_seconds) ivInput.value = st.interval_seconds;
+
+  const lc = st.last_cycle;
+  if (lc) {
+    const loss = lc.avg_loss != null ? lc.avg_loss.toFixed(3) : '—';
+    lossEl.textContent = loss;
+    durEl.textContent  = lc.duration_s != null ? lc.duration_s.toFixed(1) : '—';
+  } else {
+    lossEl.textContent = '—';
+    durEl.textContent  = '—';
+  }
+}
+
+function fmtUptime(secs) {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = Math.floor(secs % 60);
+  if (h > 0)  return h + 'ч ' + m + 'м';
+  if (m > 0)  return m + 'м ' + s + 'с';
+  return s + 'с';
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts * 1000);
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function adUpdateHistory(cycles) {
+  const tbody = document.getElementById('ad-history-body');
+  if (!cycles.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:24px">Нет данных — ждём первый цикл…</td></tr>';
+    return;
+  }
+  tbody.innerHTML = cycles.map(c => {
+    const loss = c.avg_loss != null ? c.avg_loss.toFixed(4) : '—';
+    const lossColor = c.avg_loss != null && c.avg_loss < 3 ? 'color:var(--green)' : 'color:var(--orange)';
+    const saved = c.saved ? '✅' : '—';
+    return `<tr>
+      <td style="color:var(--accent)">${c.cycle}</td>
+      <td style="color:var(--muted)">${fmtTime(c.started_at)}</td>
+      <td>${c.duration_s != null ? c.duration_s.toFixed(1)+'с' : '—'}</td>
+      <td style="color:var(--green)">${c.new_examples ?? '—'}</td>
+      <td style="color:var(--accent)">${c.replay_examples ?? '—'}</td>
+      <td style="${lossColor}">${loss}</td>
+      <td>${c.buffer_size ?? '—'}</td>
+      <td>${saved}</td>
+    </tr>`;
+  }).join('');
+}
+
+function adDrawChart(cycles) {
+  const canvas = document.getElementById('ad-chart');
+  const empty  = document.getElementById('ad-chart-empty');
+  if (!canvas) return;
+
+  const pts = cycles
+    .filter(c => c.avg_loss != null && c.avg_loss > 0)
+    .slice()               // newest-first from server, we want oldest→newest
+    .reverse()
+    .slice(-30);
+
+  if (!pts.length) {
+    canvas.style.display = 'none';
+    empty.style.display  = 'block';
+    return;
+  }
+  canvas.style.display = 'block';
+  empty.style.display  = 'none';
+
+  // Set pixel dimensions
+  const W = canvas.offsetWidth || 600;
+  const H = 100;
+  canvas.width  = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  const vals = pts.map(c => c.avg_loss);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const range = maxV - minV || 1;
+
+  const pad = { top: 10, bottom: 20, left: 8, right: 8 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  const toX = i  => pad.left + (i / Math.max(pts.length - 1, 1)) * cw;
+  const toY = v  => pad.top  + (1 - (v - minV) / range) * ch;
+
+  // Grid lines
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth   = 1;
+  [0.25, 0.5, 0.75].forEach(f => {
+    const y = pad.top + f * ch;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+  });
+
+  // Fill area under line
+  ctx.beginPath();
+  ctx.moveTo(toX(0), H - pad.bottom);
+  pts.forEach((c, i) => ctx.lineTo(toX(i), toY(c.avg_loss)));
+  ctx.lineTo(toX(pts.length - 1), H - pad.bottom);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(88,166,255,0.1)';
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth   = 2;
+  pts.forEach((c, i) => i === 0 ? ctx.moveTo(toX(i), toY(c.avg_loss)) : ctx.lineTo(toX(i), toY(c.avg_loss)));
+  ctx.stroke();
+
+  // Dots + value labels
+  ctx.fillStyle = '#58a6ff';
+  pts.forEach((c, i) => {
+    ctx.beginPath(); ctx.arc(toX(i), toY(c.avg_loss), 3, 0, 2*Math.PI); ctx.fill();
+  });
+
+  // Y-axis labels
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(maxV.toFixed(2), pad.left + 2, pad.top + 10);
+  ctx.fillText(minV.toFixed(2), pad.left + 2, H - pad.bottom - 3);
+
+  // X-axis cycle numbers
+  ctx.textAlign = 'center';
+  pts.forEach((c, i) => {
+    if (i === 0 || i === pts.length - 1 || i % Math.ceil(pts.length / 6) === 0) {
+      ctx.fillText('#' + c.cycle, toX(i), H - 4);
+    }
+  });
+}
+
+async function adToggle() {
+  const badge = document.getElementById('ad-badge');
+  const running = badge.classList.contains('on');
+  if (running) {
+    await fetch('/api/distill/stop', { method: 'POST' });
+  } else {
+    const iv = parseInt(document.getElementById('ad-interval-input').value) || 1800;
+    const fd = new FormData(); fd.append('interval_seconds', iv);
+    await fetch('/api/distill/start', { method: 'POST', body: fd });
+  }
+  await adRefresh();
+}
+
+async function adRunNow() {
+  const btn = document.getElementById('ad-btn-now');
+  btn.disabled = true;
+  btn.textContent = '⏳ Идёт…';
+  try {
+    const fd = new FormData();
+    fd.append('max_new_tokens', '96');
+    fd.append('epochs', '2');
+    const r = await fetch('/api/distill', { method: 'POST', body: fd });
+    const d = await r.json();
+    btn.textContent = '✅ ' + (d.examples_generated ?? 0) + ' примеров';
+  } catch (e) {
+    btn.textContent = '❌ Ошибка';
+  }
+  await adRefresh();
+  setTimeout(() => { btn.disabled = false; btn.textContent = '▶ Сейчас'; }, 3000);
+}
+
+async function adSetInterval() {
+  const iv = parseInt(document.getElementById('ad-interval-input').value);
+  if (!iv || iv < 10) { alert('Минимальный интервал — 10 секунд'); return; }
+  // Stop and restart with new interval
+  await fetch('/api/distill/stop', { method: 'POST' });
+  const fd = new FormData(); fd.append('interval_seconds', iv);
+  await fetch('/api/distill/start', { method: 'POST', body: fd });
+  await adRefresh();
 }
 </script>
 </body>
