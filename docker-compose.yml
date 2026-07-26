@@ -25,7 +25,7 @@ services:
       # NEW_MIR_DISTILL_INTERVAL: seconds between cycles (default 1800 = 30 min)
       # NEW_MIR_DISTILL_NEW:      new GPT-2 examples per cycle (default 5)
       # NEW_MIR_DISTILL_REPLAY:   replay buffer examples per cycle (default 10)
-      NEW_MIR_DISTILL_INTERVAL: "1800"
+      NEW_MIR_DISTILL_INTERVAL: "60"
       NEW_MIR_DISTILL_NEW: "5"
       NEW_MIR_DISTILL_REPLAY: "10"
     # Resource limits — tuned for ~70 % CPU utilisation on a typical server.

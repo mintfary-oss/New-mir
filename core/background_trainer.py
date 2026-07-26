@@ -239,6 +239,8 @@ class BackgroundTrainer:
         self._cycle_count: int = 0
         self._last_cycle: CycleStats | None = None
         self._running: bool = False
+        self._history: list[CycleStats] = []   # last 100 cycles
+        self._started_at: float = 0.0          # when start() was called
 
         # Prompt rotation pointer
         self._prompt_index: int = 0
@@ -254,6 +256,7 @@ class BackgroundTrainer:
             return
         self._stop_event.clear()
         self._running = True
+        self._started_at = time.time()
         self._thread = threading.Thread(
             target=self._loop,
             name="bg-distill",
@@ -286,13 +289,21 @@ class BackgroundTrainer:
         """Return current scheduler status for the API."""
         with self._lock:
             buf_size = len(self._buffer)
+        uptime = round(time.time() - self._started_at, 1) if self._started_at else 0.0
         return {
             "running": self.is_running,
             "interval_seconds": self.interval_seconds,
             "cycles_completed": self._cycle_count,
             "buffer_size": buf_size,
+            "uptime_s": uptime,
             "last_cycle": self._last_cycle.to_dict() if self._last_cycle else None,
         }
+
+    def history(self, limit: int = 100) -> list[dict]:
+        """Return the last *limit* completed cycle stats (newest first)."""
+        with self._lock:
+            snapshot = list(self._history)
+        return [c.to_dict() for c in reversed(snapshot[-limit:])]
 
     # ------------------------------------------------------------------
     # Main loop
@@ -392,6 +403,10 @@ class BackgroundTrainer:
 
         self._cycle_count += 1
         self._last_cycle = stats
+        with self._lock:
+            self._history.append(stats)
+            if len(self._history) > 100:
+                self._history = self._history[-100:]
 
         logger.info(
             "BG cycle %d: new=%d replay=%d avg_loss=%.4f buf=%d %.1fs",
