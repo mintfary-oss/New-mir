@@ -90,6 +90,7 @@ from core.chat_engine import ChatEngine
 from core.gpt2_backend import GPT2Backend
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
+from core.background_trainer import BackgroundTrainer
 from core.distillation import DEFAULT_DISTILL_PROMPTS, DistillationResult, run_distillation
 from core.seed_trainer import run_seed_training
 from core.trainer import HoneycombTrainer
@@ -139,12 +140,13 @@ _gpt2_gen = GPT2Backend()
 
 _trainer: HoneycombTrainer | None = None
 _chat_engine: ChatEngine | None = None
+_bg_trainer: BackgroundTrainer | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup / shutdown logic."""
-    global _trainer, _chat_engine
+    global _trainer, _chat_engine, _bg_trainer
     logger.info("Starting New-mir …")
     loop = asyncio.get_event_loop()
 
@@ -224,7 +226,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Auto-save weights failed: %s", exc)
 
+    # --- Start background distillation scheduler ----------------------------
+    # Runs in a daemon thread: every 30 min GPT-2 generates new examples,
+    # mixes them with old ones from the replay buffer, and fine-tunes the
+    # nano model — all while the server is handling requests normally.
+    def _sync_save_weights() -> None:
+        """Synchronous weight-save helper passed to BackgroundTrainer."""
+        if _neural_gen.weights is not None:
+            _WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
+            _neural_gen.save_to_file(_WEIGHTS_FILE)
+            _memory.save_to_file(_CELLS_FILE)
+
+    _bg_trainer = BackgroundTrainer(
+        teacher=_gpt2_gen,
+        student=_neural_gen,
+        save_fn=_sync_save_weights,
+        interval_seconds=int(os.environ.get("NEW_MIR_DISTILL_INTERVAL", "1800")),
+        new_per_cycle=int(os.environ.get("NEW_MIR_DISTILL_NEW", "5")),
+        replay_per_cycle=int(os.environ.get("NEW_MIR_DISTILL_REPLAY", "10")),
+    )
+    _bg_trainer.start()
+
     yield
+
+    # --- Shutdown -----------------------------------------------------------
+    if _bg_trainer is not None:
+        _bg_trainer.stop()
     logger.info("New-mir shutting down.")
 
 
@@ -424,6 +451,51 @@ async def distill(
             logger.warning("Auto-save after distillation failed: %s", exc)
 
     return result.to_dict()
+
+
+@app.get("/api/distill/status", tags=["Training"])
+async def distill_status() -> dict[str, Any]:
+    """Return the current status of the background distillation scheduler.
+
+    Shows whether it is running, how many cycles have completed, the replay
+    buffer size, and statistics from the last cycle.
+    """
+    if _bg_trainer is None:
+        return {"running": False, "cycles_completed": 0, "buffer_size": 0, "last_cycle": None}
+    return _bg_trainer.status()
+
+
+@app.post("/api/distill/start", tags=["Training"])
+async def distill_start(
+    interval_seconds: int = Form(default=1800),
+) -> dict[str, Any]:
+    """Start (or restart) the background distillation scheduler.
+
+    Parameters
+    ----------
+    interval_seconds : int
+        Seconds between distillation cycles (default 1800 = 30 min).
+        Set to 300 for every 5 minutes, 3600 for every hour, etc.
+    """
+    if _bg_trainer is None:
+        return {"started": False, "error": "BackgroundTrainer not initialised"}
+    if _bg_trainer.is_running:
+        return {"started": False, "error": "Already running", "status": _bg_trainer.status()}
+    _bg_trainer.interval_seconds = interval_seconds
+    _bg_trainer.start()
+    return {"started": True, "interval_seconds": interval_seconds}
+
+
+@app.post("/api/distill/stop", tags=["Training"])
+async def distill_stop() -> dict[str, Any]:
+    """Stop the background distillation scheduler."""
+    if _bg_trainer is None:
+        return {"stopped": False, "error": "BackgroundTrainer not initialised"}
+    if not _bg_trainer.is_running:
+        return {"stopped": False, "error": "Not running"}
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _bg_trainer.stop)
+    return {"stopped": True}
 
 
 # ---------------------------------------------------------------------------
