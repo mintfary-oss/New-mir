@@ -90,6 +90,7 @@ from core.chat_engine import ChatEngine
 from core.gpt2_backend import GPT2Backend
 from core.neural_core import NeuralCodeGen
 from core.qr_encoder import QRBinaryEncoder
+from core.distillation import DEFAULT_DISTILL_PROMPTS, DistillationResult, run_distillation
 from core.seed_trainer import run_seed_training
 from core.trainer import HoneycombTrainer
 
@@ -206,6 +207,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await loop.run_in_executor(None, run_seed_training, _trainer)
     except Exception as exc:  # noqa: BLE001
         logger.warning("Seed training skipped: %s", exc)
+
+    # Auto-save weights after seed training so that trained state survives
+    # container rebuilds (docker compose up -d --build).  Without this step
+    # the fine-tuned weights live only in RAM and are lost on every restart.
+    if _neural_gen.weights is not None:
+        try:
+            _WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
+            await loop.run_in_executor(None, _neural_gen.save_to_file, _WEIGHTS_FILE)
+            await loop.run_in_executor(None, _memory.save_to_file, _CELLS_FILE)
+            logger.info(
+                "Weights auto-saved to %s (%d bytes)",
+                _WEIGHTS_FILE,
+                _WEIGHTS_FILE.stat().st_size,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Auto-save weights failed: %s", exc)
 
     yield
     logger.info("New-mir shutting down.")
@@ -326,6 +343,87 @@ async def weights_status() -> dict[str, Any]:
         "cells_bytes": _CELLS_FILE.stat().st_size if _CELLS_FILE.exists() else 0,
         "cells_in_memory": _memory.size,
     }
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Distillation: GPT-2 → NeuralCodeGen
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/distill", tags=["Training"])
+async def distill(
+    max_new_tokens: int = Form(default=128),
+    temperature: float = Form(default=0.7),
+    epochs: int = Form(default=3),
+    prompts: str = Form(default=""),
+) -> dict[str, Any]:
+    """
+    Run GPT-2 → NeuralCodeGen knowledge distillation.
+
+    GPT-2 (teacher) generates text continuations for seed prompts.
+    NeuralCodeGen (student) is then fine-tuned on those continuations.
+    This transfers knowledge from the large pre-trained GPT-2 model into
+    the compact nano model without needing any external dataset.
+
+    Parameters
+    ----------
+    max_new_tokens : int
+        Tokens GPT-2 generates per prompt (default 128).
+    temperature : float
+        GPT-2 sampling temperature — 0.7 is focused but not repetitive.
+    epochs : int
+        Fine-tuning epochs on the student per example (default 3).
+    prompts : str
+        Optional JSON array of custom seed prompts.
+        If empty, the built-in 30-prompt set is used.
+
+    Returns
+    -------
+    JSON DistillationResult summary with loss statistics.
+    """
+    if _gpt2_gen.weights is None:
+        return {"error": "GPT-2 not loaded — cannot distill"}
+    if _neural_gen.weights is None:
+        return {"error": "NeuralCodeGen not loaded — cannot distill"}
+
+    # Parse optional custom prompts
+    custom_prompts: list[str] | None = None
+    if prompts.strip():
+        import json as _json
+
+        try:
+            parsed = _json.loads(prompts)
+            if isinstance(parsed, list):
+                custom_prompts = [str(p) for p in parsed if p]
+        except ValueError:
+            return {"error": "prompts must be a JSON array of strings"}
+
+    loop = asyncio.get_event_loop()
+    result: DistillationResult = await loop.run_in_executor(
+        None,
+        lambda: run_distillation(
+            teacher=_gpt2_gen,
+            student=_neural_gen,
+            prompts=custom_prompts,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            epochs=epochs,
+        ),
+    )
+
+    # Auto-save weights after distillation so the student's progress persists.
+    if _neural_gen.weights is not None and result.examples_generated > 0:
+        try:
+            _WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
+            await loop.run_in_executor(None, _neural_gen.save_to_file, _WEIGHTS_FILE)
+            await loop.run_in_executor(None, _memory.save_to_file, _CELLS_FILE)
+            logger.info(
+                "Weights auto-saved after distillation (%d examples)", result.examples_generated
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Auto-save after distillation failed: %s", exc)
+
+    return result.to_dict()
 
 
 # ---------------------------------------------------------------------------
@@ -613,6 +711,17 @@ async def train_files(
         _trainer.train_files,
         list(valid),
     )
+
+    # Persist weights after every manual training session so progress is
+    # not lost on container restart or image rebuild.
+    if _neural_gen.weights is not None:
+        try:
+            _WEIGHTS_DIR.mkdir(parents=True, exist_ok=True)
+            await loop.run_in_executor(None, _neural_gen.save_to_file, _WEIGHTS_FILE)
+            await loop.run_in_executor(None, _memory.save_to_file, _CELLS_FILE)
+            logger.info("Weights auto-saved after manual training session %s", session.session_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Auto-save after training failed: %s", exc)
 
     return JSONResponse(content=session.to_dict())
 
