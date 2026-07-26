@@ -81,6 +81,14 @@ SEED_FILES = [
     "russian_language.md",
     # Russian extended — culture, science, tech, dialogs, motivation (100KB+)
     "russian_extended.md",
+    # Machine code, binary, assembly (x86-64, ARM64, RISC-V), compilation
+    "machine_code.md",
+    # CPU architecture — pipelines, OoO, caches, branch prediction, microarchitectures
+    "cpu_architecture.md",
+    # Computer components — GPU, RAM, NVMe, PSU, networking, servers, racks
+    "computer_components.md",
+    # Memory systems — DRAM internals, virtual memory, TLB, NUMA, cache optimisation
+    "memory_systems.md",
 ]
 
 # Files that existed *before* per-file tracking was introduced (v1.0 / v1.1).
