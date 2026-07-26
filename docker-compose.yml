@@ -22,21 +22,23 @@ services:
       # container restarts AND image rebuilds.
       NEW_MIR_STATE_DIR: "/app/data/state"
       # Background distillation scheduler settings.
-      # NEW_MIR_DISTILL_INTERVAL: seconds between cycles (default 1800 = 30 min)
-      # NEW_MIR_DISTILL_NEW:      new GPT-2 examples per cycle (default 5)
-      # NEW_MIR_DISTILL_REPLAY:   replay buffer examples per cycle (default 10)
       NEW_MIR_DISTILL_INTERVAL: "60"
       NEW_MIR_DISTILL_NEW: "5"
       NEW_MIR_DISTILL_REPLAY: "10"
-    # Resource limits — tuned for ~70 % CPU utilisation on a typical server.
-    # Raise cpus further if the host has more cores to spare.
+    # ── Resource limits ────────────────────────────────────────────────────
+    # These are DEFAULTS for manual use.  When installed via install.sh, a
+    # docker-compose.override.yml is generated automatically with limits
+    # tuned to your actual hardware (CPU cores, RAM, GPU).
+    #
+    # GPU support: install.sh adds NVIDIA GPU device reservation here
+    # automatically when nvidia-container-toolkit is detected.
     deploy:
       resources:
         limits:
-          cpus: "2.0"
-          memory: "4g"
+          cpus: "1.0"     # override: install.sh sets this to 90% of your CPUs
+          memory: "2g"    # override: install.sh sets this to 80% of your RAM
         reservations:
-          cpus: "0.5"
+          cpus: "0.25"
           memory: "512m"
     healthcheck:
       test: ["CMD", "python", "-c",
@@ -48,11 +50,8 @@ services:
       start_period: 120s
     volumes:
       # Persists GPT-2 / HuggingFace model weights between container restarts.
-      # Seed data (data/seed/) is embedded in the image and never re-downloaded.
       - new_mir_models:/app/data/models
-      # Persists training state (training_stats.json), saved neural weights
-      # (weights/neural_core.json) and cell snapshots (weights/cells.json).
-      # Unlike source code, these survive both restarts AND image rebuilds.
+      # Persists training state, saved neural weights and cell snapshots.
       - new_mir_state:/app/data/state
 
 volumes:
