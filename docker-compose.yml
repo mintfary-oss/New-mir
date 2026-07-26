@@ -21,12 +21,16 @@ services:
       # here.  Backed by the new_mir_state volume so they survive both
       # container restarts AND image rebuilds.
       NEW_MIR_STATE_DIR: "/app/data/state"
-    # Limit CPU and RAM — safe for any hardware
+    # Resource limits — tuned for ~70 % CPU utilisation on a typical server.
+    # Raise cpus further if the host has more cores to spare.
     deploy:
       resources:
         limits:
+          cpus: "3.0"
+          memory: "4g"
+        reservations:
           cpus: "1.0"
-          memory: "2g"
+          memory: "1g"
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
