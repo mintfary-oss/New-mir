@@ -141,9 +141,10 @@ detect_hardware() {
 compute_limits() {
   section "Computing resource limits"
 
-  # CPU: use up to 90% of available cores (min 0.5, rounded to 1 decimal)
-  CPUS_LIMIT=$(awk "BEGIN{v=${HW_CPU_CORES}*0.90; if(v<0.5)v=0.5; printf \"%.1f\", v}")
-  info "CPU limit: ${CPUS_LIMIT} of ${HW_CPU_CORES} cores (90%)"
+  # CPU: use 50% of available cores — safe value that avoids critical load.
+  # Raise to 0.70 or 0.80 manually in docker-compose.override.yml if needed.
+  CPUS_LIMIT=$(awk "BEGIN{v=${HW_CPU_CORES}*0.50; if(v<0.5)v=0.5; printf \"%.1f\", v}")
+  info "CPU limit: ${CPUS_LIMIT} of ${HW_CPU_CORES} cores (50%)"
 
   # RAM: use 80% of total RAM (min 1g, expressed in MB then formatted)
   local ram_limit_mb

@@ -35,7 +35,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"     # override: install.sh sets this to 90% of your CPUs
+          cpus: "1.0"     # override: install.sh sets this to 50% of your CPUs
           memory: "2g"    # override: install.sh sets this to 80% of your RAM
         reservations:
           cpus: "0.25"
