@@ -248,7 +248,7 @@ for t_idx, tok_id in enumerate(ids[:-1]):
 - FINE_TUNE_EPOCHS: 1 → 5 (5×) = итого 20× больше обучения
 - Параметров обучается: 2% → 52%
 
-### v2.2 (текущий PR)
+### v2.2 (PR #15)
 - **Полный attention backprop**: Q, K, V, O веса через softmax backward
 - **Gradient clipping** в Adam (max_grad_norm=5.0) — стабильное обучение
 - **_forward_and_cache** расширен: сохраняет q_h, k_h, v_h, attn, ctx
@@ -256,6 +256,17 @@ for t_idx, tok_id in enumerate(ids[:-1]):
 - Параметров обучается: 52% → **100%** от всех 6M
 - **russian_extended.md** — 48KB новых русских текстов (12 разделов)
 - Итого русских данных: 79KB (31KB + 48KB)
+
+### v2.3 (текущий PR) — Фаза 3: архитектурные улучшения
+- **RoPE** (Rotary Position Embedding): заменяет обучаемые `pos_emb`.
+  Позиция кодируется вращением Q/K. Нет новых параметров. Backward через
+  обратное вращение: `_rope_rotate(d, cos, -sin)`.
+- **SwiGLU**: заменяет GELU в FF слоях.
+  `FFN(x) = (SiLU(x@w1+b1) ⊙ x@w3) @ w2 + b2`
+  Добавлен `ff_w3` (D×FF) на каждый слой. Полный backward (d_gate, d_up, d_w3).
+- **Weight tying**: `lm_head = tok_emb.T` — нет отдельной матрицы.
+  Экономия ~660K параметров. Input/output embedding пространства совпадают.
+- Параметров: 6M → ~5.3M (−10%)
 
 ---
 
@@ -317,12 +328,11 @@ Vocab size всего 258 — маленький и фиксированный.
    - `core/neural_core.py` — вся математика модели
    - `core/seed_trainer.py` — как работает обучение
 
-2. **Следующий приоритет** (Фаза 3 из ROADMAP — архитектурные улучшения):
-   - RoPE позиционное кодирование (вместо обучаемых positional embeddings)
-   - SwiGLU активация (вместо GELU в FF слоях)
-   - Weight tying: связать `tok_emb` и `lm_head` (-10% параметров)
-   - Продолжать наполнение русских seed-данных (цель: 200KB+)
-   - (Фаза 2 — Adam, FF backprop, Attention backprop — уже реализованы в v2.1/v2.2)
+2. **Следующий приоритет** (Фаза 4 из ROADMAP — многоязычность):
+   - Добавить 200KB+ русских seed-данных (сейчас 79KB)
+   - GQA (Grouped Query Attention) — меньше памяти при KV-cache
+   - KV-cache для ускорения инференса (Фаза 5)
+   - (Фаза 3 — RoPE, SwiGLU, Weight tying — реализованы в v2.3)
 
 3. **Команды для запуска:**
    ```bash
@@ -360,4 +370,4 @@ Vocab size всего 258 — маленький и фиксированный.
 ---
 
 *Создан: июль 2026*
-*Последнее обновление: июль 2026 (v2.2)*
+*Последнее обновление: июль 2026 (v2.3)*

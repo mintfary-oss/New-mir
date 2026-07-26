@@ -6,14 +6,17 @@
 
 ---
 
-## ТЕКУЩЕЕ СОСТОЯНИЕ (v2.2 — актуальное)
+## ТЕКУЩЕЕ СОСТОЯНИЕ (v2.3 — актуальное)
 
 ### Что есть сейчас
 - Transformer decoder на чистом NumPy (без PyTorch/TensorFlow)
-- ~6M параметров (embed_dim=256, 4 слоя, ff_dim=1024, max_seq=1024)
+- ~5.3M параметров (embed_dim=256, 4 слоя, ff_dim=1024, max_seq=1024)
 - ByteTokenizer — все языки через UTF-8 байты (vocab=258)
 - AdamOptimizer с gradient clipping (max_grad_norm=5.0)
-- Полный backprop: 100% весов обучаются (lm_head, tok_emb, FF, Attention)
+- Полный backprop: 100% весов (Attention + SwiGLU FF + tok_emb)
+- **RoPE** позиционное кодирование (нет обучаемых pos_emb)
+- **SwiGLU** активация в FF слоях (GELU заменён)
+- **Weight tying**: lm_head = tok_emb.T
 - Honeycomb-память для хранения весов
 - Система seed-файлов для автообучения при старте
 - Seed-данные: 15 файлов, ~79KB русских данных
@@ -104,13 +107,13 @@ if grad_norm > max_grad_norm:
 
 ---
 
-## ФАЗА 3: АРХИТЕКТУРА (v2.5)
+## ФАЗА 3: АРХИТЕКТУРА (v2.3) — ЗАВЕРШЕНА ✓
 
-**Срок:** 2-3 спринта
-**Цель:** Архитектурные улучшения без роста требований к железу
+**Статус:** ✅ Реализовано в текущем PR
+**Цель была:** Архитектурные улучшения без роста требований к железу
 
-### 3.1 RoPE позиционное кодирование
-Заменить обучаемые позиционные embedding на Rotary Position Embedding (RoPE).
+### 3.1 RoPE позиционное кодирование ✅
+Заменены обучаемые позиционные embedding на Rotary Position Embedding (RoPE).
 
 Преимущества:
 - Лучше обобщается на длинные последовательности
@@ -131,35 +134,16 @@ def _rope(x: np.ndarray, seq_pos: np.ndarray) -> np.ndarray:
 ```
 
 ### 3.2 Grouped Query Attention (GQA)
-Уменьшает память и вычисления при сохранении качества.
-Используется в LLaMA 3, Mistral, Gemma.
+[ ] Отложено на Фазу 5 (требует KV-cache для полной пользы).
 
-```
-Стандартное внимание:  Q heads = K heads = V heads = 8
-GQA (groups=2):        Q heads = 8, K/V heads = 2
-Экономия памяти: 4x для KV-cache
-```
+### 3.3 SwiGLU активация ✅
+Реализовано: `FFN(x) = (SiLU(x@w1+b1) ⊙ x@w3) @ w2 + b2`
+Добавлен `ff_w3` (D×FF) в `TransformerWeights`. Полный backward через d_gate/d_up/d_w3.
 
-### 3.3 SwiGLU активация
-Заменить GELU на SwiGLU в feed-forward слоях:
-
-```python
-def _swiglu(x, w1, w2, w3):
-    """SwiGLU: лучше GELU, используется в LLaMA."""
-    return (x @ w1) * sigmoid(x @ w3) @ w2
-```
-
-Показывает лучшее качество по сравнению с GELU при тех же параметрах.
-
-### 3.4 Weight tying
-Связать веса `tok_emb` и `lm_head` (стандартная техника):
-
-```python
-# lm_head использует транспонированные embedding веса
-logits = hidden @ self.weights.tok_emb.T  # вместо @ lm_head
-```
-
-Преимущества: -10% параметров, лучшая согласованность input/output.
+### 3.4 Weight tying ✅
+Реализовано: `logits = hidden @ weights.tok_emb.T`
+Нет отдельной матрицы `lm_head`. Экономия ~660K параметров.
+Backward: `grad_lm.T` накапливается в `tok_emb`.
 
 ---
 
@@ -302,8 +286,9 @@ TOOLS = {
 | v1.x (было) | 145K | 8 MB | EN only | очень слабый |
 | v2.0 | 6M | 24 MB | все (байты) | базовый |
 | v2.1 | 6M | 24 MB | все | лучше (Adam + FF backprop) |
-| **v2.2 (сейчас)** | **6M** | **24 MB** | **все** | **заметно лучше (100% backprop)** |
-| v2.5 | 6M | 24 MB | все | приемлемый |
+| v2.2 | 6M | 24 MB | все | заметно лучше (100% backprop) |
+| **v2.3 (сейчас)** | **5.3M** | **22 MB** | **все** | **лучше (RoPE+SwiGLU+WTying)** |
+| v2.5 | 5.3M | 22 MB | все | приемлемый |
 | v3.0 | 15M | 60 MB | RU/EN/ZH++ | хороший |
 | v4.0 | 30M | 120 MB | все | очень хороший |
 
@@ -345,7 +330,8 @@ New-mir — это **эффективная, честная, работающа�
 | v1.3 | 2026-07 | OpenAI Cookbook, Awesome-Python, Rust Book, Pulumi Examples, TypeScript Handbook |
 | v2.0 | 2026-07 | ByteTokenizer, 6M params, tok_emb training, Russian seed data |
 | v2.1 | 2026-07 | AdamOptimizer, FF backprop (GELU grad), MAX_FINE_TUNE_CHARS 32KB, 5 эпох |
-| **v2.2** | **2026-07** | **Attention backprop (Q/K/V/O), gradient clipping, russian_extended.md 61KB** |
+| v2.2 | 2026-07 | Attention backprop (Q/K/V/O), gradient clipping, russian_extended.md 61KB |
+| **v2.3** | **2026-07** | **RoPE, SwiGLU+ff_w3, Weight tying (lm_head=tok_emb.T), −10% параметров** |
 
 ---
 
