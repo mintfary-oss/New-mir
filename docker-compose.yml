@@ -22,7 +22,7 @@ services:
       # container restarts AND image rebuilds.
       NEW_MIR_STATE_DIR: "/app/data/state"
       # Background distillation scheduler settings.
-      NEW_MIR_DISTILL_INTERVAL: "60"
+      NEW_MIR_DISTILL_INTERVAL: "3"
       NEW_MIR_DISTILL_NEW: "5"
       NEW_MIR_DISTILL_REPLAY: "10"
     # ── Resource limits ────────────────────────────────────────────────────

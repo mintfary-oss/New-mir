@@ -56,7 +56,7 @@ import random
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Optional
 
 if TYPE_CHECKING:
     from core.gpt2_backend import GPT2Backend
@@ -187,6 +187,7 @@ class BackgroundTrainer:
         Called after each successful cycle to persist weights to disk.
     interval_seconds : int
         Seconds to wait between distillation cycles (default 1800 = 30 min).
+        Set to 3 for near-continuous idle training.
     new_per_cycle : int
         Number of fresh GPT-2 generations per cycle (default 5).
     replay_per_cycle : int
@@ -199,6 +200,11 @@ class BackgroundTrainer:
         GPT-2 sampling temperature (default 0.7).
     fine_tune_epochs : int
         Fine-tuning epochs per example on the student (default 2).
+    idle_check_fn : Callable[[], bool] | None
+        Optional callback that returns True when the server is idle (no
+        active user requests).  When provided, a cycle is skipped and
+        deferred by ``interval_seconds`` whenever the callback returns
+        False.  Use this to avoid competing with live user traffic.
     """
 
     def __init__(
@@ -214,10 +220,12 @@ class BackgroundTrainer:
         max_new_tokens: int = 96,
         temperature: float = 0.7,
         fine_tune_epochs: int = 2,
+        idle_check_fn: Optional[Callable[[], bool]] = None,
     ) -> None:
         self._teacher = teacher
         self._student = student
         self._save_fn = save_fn
+        self._idle_check_fn = idle_check_fn
 
         self.interval_seconds = interval_seconds
         self.new_per_cycle = new_per_cycle
@@ -310,14 +318,31 @@ class BackgroundTrainer:
     # ------------------------------------------------------------------
 
     def _loop(self) -> None:
-        """Run one distillation cycle, then sleep until the next one."""
+        """Run one distillation cycle, then sleep until the next one.
+
+        When ``idle_check_fn`` is set the cycle is skipped (and the wait
+        restarted) whenever the callback reports that a user request is in
+        progress.  This prevents distillation from competing with live
+        traffic; it resumes automatically once the server goes idle again.
+        """
         logger.info("BackgroundTrainer loop started.")
         while not self._stop_event.is_set():
-            # Wait for the interval (but wake up immediately on stop)
+            # Wait for the configured interval (or wake up early on stop).
             if self._stop_event.wait(timeout=self.interval_seconds):
                 break  # stop was requested
             if self._stop_event.is_set():
                 break
+
+            # If an idle-check callback is registered, defer the cycle
+            # while the server is handling user requests.
+            if self._idle_check_fn is not None and not self._idle_check_fn():
+                logger.debug(
+                    "BackgroundTrainer: user active — deferring cycle, "
+                    "retrying in %ds",
+                    self.interval_seconds,
+                )
+                continue
+
             try:
                 self._run_cycle()
             except Exception as exc:  # noqa: BLE001
