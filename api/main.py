@@ -72,6 +72,7 @@ import logging
 import os
 import queue
 import threading
+import time
 import zipfile
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import asynccontextmanager
@@ -142,6 +143,28 @@ _gpt2_gen = GPT2Backend()
 _trainer: HoneycombTrainer | None = None
 _chat_engine: ChatEngine | None = None
 _bg_trainer: BackgroundTrainer | None = None
+
+# ---------------------------------------------------------------------------
+# Idle-activity tracking for background distillation
+# ---------------------------------------------------------------------------
+# Updated whenever a *user-initiated* action arrives (chat, generate, train,
+# manual distill).  The background trainer defers its cycle while the server
+# is actively processing a user request, then resumes automatically once the
+# server has been idle for _IDLE_THRESHOLD_S seconds.
+
+_last_user_activity: float = 0.0
+_IDLE_THRESHOLD_S: float = 30.0  # seconds of silence before training resumes
+
+
+def _record_user_activity() -> None:
+    """Mark the current moment as the last time a user request arrived."""
+    global _last_user_activity
+    _last_user_activity = time.time()
+
+
+def _is_user_idle() -> bool:
+    """Return True when no user request has arrived for _IDLE_THRESHOLD_S."""
+    return (time.time() - _last_user_activity) > _IDLE_THRESHOLD_S
 
 
 @asynccontextmanager
@@ -251,6 +274,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         interval_seconds=int(os.environ.get("NEW_MIR_DISTILL_INTERVAL", "1800")),
         new_per_cycle=int(os.environ.get("NEW_MIR_DISTILL_NEW", "5")),
         replay_per_cycle=int(os.environ.get("NEW_MIR_DISTILL_REPLAY", "10")),
+        # Pause distillation while the server is actively handling user
+        # requests; resumes automatically once idle for _IDLE_THRESHOLD_S s.
+        idle_check_fn=_is_user_idle,
     )
     _bg_trainer.start()
 
@@ -415,6 +441,7 @@ async def distill(
     -------
     JSON DistillationResult summary with loss statistics.
     """
+    _record_user_activity()
     if _gpt2_gen.weights is None:
         return {"error": "GPT-2 not loaded — cannot distill"}
     if _neural_gen.weights is None:
@@ -710,6 +737,7 @@ async def generate_code(
     description_mode : bool
         If True, *prompt* is treated as a task description.
     """
+    _record_user_activity()
     if _neural_gen.weights is None:
         raise HTTPException(status_code=503, detail="Model weights not loaded")
 
@@ -781,6 +809,7 @@ async def train_files(
     -------
     JSON TrainingSession summary.
     """
+    _record_user_activity()
     if _trainer is None:
         raise HTTPException(status_code=503, detail="Trainer not initialised")
 
@@ -1053,6 +1082,7 @@ async def chat_send(
     Tokens are streamed one chunk at a time (not buffered), so the Stop
     button interrupts generation at the next chunk boundary.
     """
+    _record_user_activity()
     if _chat_engine is None:
         raise HTTPException(status_code=503, detail="Chat engine not ready")
 
