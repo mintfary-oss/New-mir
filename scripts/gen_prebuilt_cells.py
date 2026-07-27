@@ -1354,5 +1354,383 @@ KNOWLEDGE += [
 # GENERATE CELLS
 # ---------------------------------------------------------------------------
 
+# ===========================================================================
+# WAVE 3 — ~200 more unique cells
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# PERL
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "perl", "topic": "basics", "keywords": ["perl", "regex", "hash", "array", "cpan"],
+     "snippets": [
+         "#!/usr/bin/perl\nuse strict;\nuse warnings;\n\n# Variables\nmy $name  = 'Alice';\nmy @arr   = (1, 2, 3, 4, 5);\nmy %hash  = (name => 'Bob', age => 30);\n\n# Loops\nforeach my $n (@arr) { print \"$n\\n\"; }\nwhile (my ($k, $v) = each %hash) { print \"$k=$v\\n\"; }\n\n# Regex\nmy $text = 'Hello World 2024';\n$text =~ s/\\d+/YEAR/g;\n(my $upper = $text) =~ s/\\b(\\w)/uc($1)/ge;",
+         "# Perl file processing\nuse File::Find;\nuse Path::Tiny;\n\n# Read file\nmy $content = path('data.txt')->slurp_utf8;\nmy @lines   = path('data.txt')->lines_utf8;\n\n# Find all .py files\nmy @py_files;\nfind(sub { push @py_files, $File::Find::name if /\\.py$/ }, '.');\n\n# One-liner style\nmy $count = scalar grep { /error/i } @lines;\nmy @unique = do { my %seen; grep { !$seen{$_}++ } @lines };",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# FORTRAN (scientific computing)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "fortran", "topic": "basics", "keywords": ["fortran", "array", "subroutine", "numerical", "scientific"],
+     "snippets": [
+         "! Fortran 90 basics\nprogram hello\n  implicit none\n  integer :: i, n = 10\n  real(8), dimension(10) :: arr\n  real(8) :: total = 0.0\n\n  do i = 1, n\n    arr(i) = real(i) * 2.0\n    total  = total + arr(i)\n  end do\n  print *, 'Sum:', total\n  print *, 'Mean:', total / n\nend program hello",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# COBOL (legacy / finance)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "cobol", "topic": "basics", "keywords": ["cobol", "data division", "procedure", "legacy", "mainframe"],
+     "snippets": [
+         "       IDENTIFICATION DIVISION.\n       PROGRAM-ID. HELLO-WORLD.\n       DATA DIVISION.\n       WORKING-STORAGE SECTION.\n       01 WS-NAME     PIC X(20) VALUE 'Alice'.\n       01 WS-COUNTER  PIC 9(5)  VALUE ZERO.\n       01 WS-TOTAL    PIC 9(9)V99 VALUE ZERO.\n       PROCEDURE DIVISION.\n           MOVE 'Bob' TO WS-NAME\n           ADD 1 TO WS-COUNTER\n           DISPLAY 'Hello, ' WS-NAME\n           STOP RUN.",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PROLOG (logic programming)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "prolog", "topic": "basics", "keywords": ["prolog", "fact", "rule", "query", "logic programming"],
+     "snippets": [
+         "% Prolog facts and rules\nparent(tom, bob).\nparent(tom, liz).\nparent(bob, ann).\nparent(bob, pat).\n\ngrandparent(X, Z) :- parent(X, Y), parent(Y, Z).\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n\n% List operations\nmy_length([], 0).\nmy_length([_|T], N) :- my_length(T, N1), N is N1 + 1.\n\nmy_append([], L, L).\nmy_append([H|T], L, [H|R]) :- my_append(T, L, R).",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# SOLIDITY (smart contracts)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "solidity", "topic": "basics", "keywords": ["solidity", "smart contract", "ethereum", "blockchain", "evm"],
+     "snippets": [
+         "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract Token {\n    string public name   = 'MyToken';\n    string public symbol = 'MTK';\n    uint8  public decimals = 18;\n    uint256 public totalSupply;\n\n    mapping(address => uint256) public balanceOf;\n    mapping(address => mapping(address => uint256)) public allowance;\n\n    event Transfer(address indexed from, address indexed to, uint256 value);\n    event Approval(address indexed owner, address indexed spender, uint256 value);\n\n    constructor(uint256 _supply) {\n        totalSupply = _supply * 10 ** decimals;\n        balanceOf[msg.sender] = totalSupply;\n    }\n\n    function transfer(address to, uint256 amount) external returns (bool) {\n        require(balanceOf[msg.sender] >= amount, 'Insufficient balance');\n        balanceOf[msg.sender] -= amount;\n        balanceOf[to]         += amount;\n        emit Transfer(msg.sender, to, amount);\n        return true;\n    }\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# WASM / WAT (WebAssembly Text Format)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "wat", "topic": "webassembly", "keywords": ["webassembly", "wasm", "wat", "module", "memory"],
+     "snippets": [
+         ";; WebAssembly Text Format (WAT)\n(module\n  ;; Import JS function\n  (import \"env\" \"log\" (func $log (param i32)))\n\n  ;; Memory: 1 page = 64KB\n  (memory 1)\n\n  ;; Add two integers\n  (func $add (export \"add\") (param $a i32) (param $b i32) (result i32)\n    local.get $a\n    local.get $b\n    i32.add\n  )\n\n  ;; Fibonacci\n  (func $fib (export \"fib\") (param $n i32) (result i32)\n    local.get $n\n    i32.const 2\n    i32.lt_s\n    if (result i32)\n      local.get $n\n    else\n      local.get $n\n      i32.const 1\n      i32.sub\n      call $fib\n      local.get $n\n      i32.const 2\n      i32.sub\n      call $fib\n      i32.add\n    end\n  )\n)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — scientific / numerical
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "scipy", "keywords": ["scipy", "linear algebra", "optimization", "statistics", "python"],
+     "snippets": [
+         "from scipy import optimize, linalg, stats\nimport numpy as np\n\n# Solve linear system Ax = b\nA = np.array([[2, 1], [1, 3]], dtype=float)\nb = np.array([8, 13], dtype=float)\nx = linalg.solve(A, b)\nprint(x)  # [3. 2.]\n\n# Minimize function\nresult = optimize.minimize(lambda x: (x[0]-1)**2 + (x[1]-2)**2,\n                           x0=[0, 0], method='L-BFGS-B')\nprint(result.x)  # [1. 2.]",
+         "from scipy import stats\nimport numpy as np\n\n# Hypothesis testing\ngroup_a = np.random.normal(50, 10, 100)\ngroup_b = np.random.normal(55, 10, 100)\nt_stat, p_value = stats.ttest_ind(group_a, group_b)\nprint(f't={t_stat:.3f}, p={p_value:.4f}')\n\n# Confidence interval\nmean = np.mean(group_a)\nci = stats.t.interval(0.95, df=len(group_a)-1,\n                      loc=mean, scale=stats.sem(group_a))\nprint(f'95% CI: {ci}')  # (lower, upper)",
+         "import numpy as np\nfrom sklearn.preprocessing import StandardScaler\nfrom sklearn.decomposition import PCA\n\n# PCA dimensionality reduction\nX = np.random.randn(1000, 50)  # 1000 samples, 50 features\nscaler = StandardScaler()\nX_scaled = scaler.fit_transform(X)\n\npca = PCA(n_components=10, random_state=42)\nX_reduced = pca.fit_transform(X_scaled)\nprint(f'Explained variance: {pca.explained_variance_ratio_.sum():.2%}')\nprint(f'Shape: {X.shape} → {X_reduced.shape}')",
+     ]},
+    {"lang": "python", "topic": "matplotlib", "keywords": ["matplotlib", "plot", "figure", "seaborn", "visualization"],
+     "snippets": [
+         "import matplotlib.pyplot as plt\nimport numpy as np\n\nfig, axes = plt.subplots(2, 2, figsize=(12, 8))\n\n# Line plot\nx = np.linspace(0, 2*np.pi, 200)\naxes[0,0].plot(x, np.sin(x), label='sin', color='blue')\naxes[0,0].plot(x, np.cos(x), label='cos', color='red')\naxes[0,0].legend(); axes[0,0].set_title('Trig functions')\n\n# Histogram\ndata = np.random.randn(1000)\naxes[0,1].hist(data, bins=40, edgecolor='black', alpha=0.7)\naxes[0,1].set_title('Normal distribution')\n\n# Scatter\naxes[1,0].scatter(np.random.rand(50), np.random.rand(50),\n                  c=np.random.rand(50), cmap='viridis', alpha=0.6)\n\nplt.tight_layout()\nplt.savefig('plots.png', dpi=150)\nplt.show()",
+     ]},
+    {"lang": "python", "topic": "pytorch", "keywords": ["pytorch", "tensor", "autograd", "neural network", "training"],
+     "snippets": [
+         "import torch\nimport torch.nn as nn\nimport torch.optim as optim\nfrom torch.utils.data import DataLoader, TensorDataset\n\n# Simple training loop\nX = torch.randn(1000, 20)\ny = (X.sum(dim=1) > 0).float()\n\ndataset = TensorDataset(X, y)\nloader  = DataLoader(dataset, batch_size=32, shuffle=True)\n\nmodel = nn.Sequential(\n    nn.Linear(20, 64), nn.ReLU(),\n    nn.Linear(64, 32), nn.ReLU(),\n    nn.Linear(32, 1),  nn.Sigmoid()\n)\n\nopt      = optim.Adam(model.parameters(), lr=1e-3)\ncriterion = nn.BCELoss()\n\nfor epoch in range(10):\n    for Xb, yb in loader:\n        opt.zero_grad()\n        pred = model(Xb).squeeze()\n        loss = criterion(pred, yb)\n        loss.backward()\n        opt.step()",
+         "import torch\nimport torch.nn as nn\n\n# Custom dataset\nfrom torch.utils.data import Dataset\n\nclass TextDataset(Dataset):\n    def __init__(self, texts, labels, tokenizer, max_len=128):\n        self.encodings = tokenizer(texts, truncation=True,\n                                   padding='max_length', max_length=max_len)\n        self.labels = labels\n\n    def __len__(self): return len(self.labels)\n\n    def __getitem__(self, idx):\n        return {\n            'input_ids':      torch.tensor(self.encodings['input_ids'][idx]),\n            'attention_mask': torch.tensor(self.encodings['attention_mask'][idx]),\n            'labels':         torch.tensor(self.labels[idx])\n        }",
+         "import torch\n\n# Save / load model\n# Save weights only (preferred)\ntorch.save(model.state_dict(), 'model.pt')\nmodel.load_state_dict(torch.load('model.pt'))\nmodel.eval()\n\n# Save full model\ntorch.save(model, 'model_full.pt')\n\n# Mixed precision training\nfrom torch.cuda.amp import GradScaler, autocast\nscaler = GradScaler()\n\nwith autocast():\n    output = model(batch)\n    loss   = criterion(output, targets)\n\nscaler.scale(loss).backward()\nscaler.step(optimizer)\nscaler.update()",
+     ]},
+    {"lang": "python", "topic": "transformers", "keywords": ["huggingface", "transformers", "bert", "llm", "tokenizer"],
+     "snippets": [
+         "from transformers import AutoTokenizer, AutoModelForSequenceClassification\nimport torch\n\nmodel_name = 'bert-base-multilingual-cased'\ntokenizer  = AutoTokenizer.from_pretrained(model_name)\nmodel      = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)\n\ndef predict(text: str) -> dict:\n    inputs = tokenizer(text, return_tensors='pt',\n                       truncation=True, max_length=512)\n    with torch.no_grad():\n        logits = model(**inputs).logits\n    probs = torch.softmax(logits, dim=-1).squeeze().tolist()\n    label = 'positive' if probs[1] > 0.5 else 'negative'\n    return {'label': label, 'confidence': max(probs)}",
+         "from transformers import pipeline\n\n# Ready-made pipelines\nclassifier  = pipeline('sentiment-analysis',   model='distilbert-base-uncased-finetuned-sst-2-english')\ntranslator  = pipeline('translation_ru_to_en', model='Helsinki-NLP/opus-mt-ru-en')\ngenerator   = pipeline('text-generation',      model='gpt2')\nqa          = pipeline('question-answering',   model='distilbert-base-cased-distilled-squad')\n\nresult  = classifier('I love this product!')\neng     = translator('Привет мир')\ntext    = generator('Once upon a time', max_new_tokens=50)\nanswer  = qa(question='Who is Alice?', context='Alice is a software engineer.')",
+     ]},
+    {"lang": "python", "topic": "langchain", "keywords": ["langchain", "llm", "chain", "retrieval", "prompt"],
+     "snippets": [
+         "from langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import ChatPromptTemplate\nfrom langchain_core.output_parsers import StrOutputParser\n\n# Simple chain\nmodel  = ChatOpenAI(model='gpt-4o-mini', temperature=0.7)\nprompt = ChatPromptTemplate.from_messages([\n    ('system', 'You are a helpful coding assistant. Reply in {language}.'),\n    ('human',  '{question}'),\n])\n\nchain = prompt | model | StrOutputParser()\nanswer = chain.invoke({'question': 'Explain async/await', 'language': 'Russian'})",
+         "from langchain_community.vectorstores import Chroma\nfrom langchain_openai import OpenAIEmbeddings\nfrom langchain.text_splitter import RecursiveCharacterTextSplitter\n\n# RAG pipeline\nloader   = PyPDFLoader('document.pdf')\npages    = loader.load()\nsplitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)\nchunks   = splitter.split_documents(pages)\n\nvectorstore = Chroma.from_documents(chunks, OpenAIEmbeddings())\nretriever   = vectorstore.as_retriever(search_kwargs={'k': 4})\n\nfrom langchain.chains import RetrievalQA\nqa_chain = RetrievalQA.from_chain_type(llm=model, retriever=retriever)\nanswer   = qa_chain.invoke({'query': 'What is the main topic?'})",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# RUST — more patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "rust", "topic": "patterns", "keywords": ["iterator", "collect", "map", "filter", "rust"],
+     "snippets": [
+         "// Iterators and lazy evaluation\nlet nums = vec![1,2,3,4,5,6,7,8,9,10];\nlet result: Vec<String> = nums.iter()\n    .filter(|&&x| x % 2 == 0)\n    .map(|&x| x * x)\n    .take(3)\n    .map(|x| format!(\"{}^2\", (x as f64).sqrt() as i32))\n    .collect();\nprintln!(\"{:?}\", result); // [\"2^2\", \"4^2\", \"6^2\"]\n\n// Custom iterator\nstruct Counter { count: u32, max: u32 }\nimpl Iterator for Counter {\n    type Item = u32;\n    fn next(&mut self) -> Option<Self::Item> {\n        if self.count < self.max { self.count += 1; Some(self.count) }\n        else { None }\n    }\n}",
+         "// Rust macros\nmacro_rules! vec_of_strings {\n    ($($x:expr),*) => {\n        vec![$($x.to_string()),*]\n    };\n}\n\nlet names = vec_of_strings![\"Alice\", \"Bob\", \"Carol\"];\n\n// Derive macros\nuse serde::{Serialize, Deserialize};\n\n#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]\nstruct Config {\n    host:  String,\n    port:  u16,\n    debug: bool,\n}\n\n// From / Into\nimpl From<&str> for Config {\n    fn from(s: &str) -> Self {\n        serde_json::from_str(s).unwrap()\n    }\n}",
+         "// Rust concurrency with Rayon\nuse rayon::prelude::*;\n\nlet numbers: Vec<i64> = (1..=1_000_000).collect();\nlet sum: i64 = numbers.par_iter().sum();         // parallel sum\nlet squares: Vec<i64> = numbers.par_iter()\n    .map(|&x| x * x)\n    .collect();                                   // parallel map\n\n// Thread-safe shared state\nuse std::sync::{Arc, RwLock};\nlet data: Arc<RwLock<Vec<i32>>> = Arc::new(RwLock::new(vec![]));\nlet data_clone = Arc::clone(&data);\nstd::thread::spawn(move || {\n    data_clone.write().unwrap().push(42);\n});",
+     ]},
+    {"lang": "rust", "topic": "sqlx", "keywords": ["sqlx", "database", "query", "postgres", "rust"],
+     "snippets": [
+         "use sqlx::{PgPool, Row};\nuse serde::{Serialize, Deserialize};\n\n#[derive(Serialize, Deserialize, sqlx::FromRow)]\npub struct User {\n    pub id:    i32,\n    pub name:  String,\n    pub email: String,\n}\n\npub async fn get_users(pool: &PgPool) -> Result<Vec<User>, sqlx::Error> {\n    sqlx::query_as::<_, User>(\"SELECT id,name,email FROM users ORDER BY id\")\n        .fetch_all(pool).await\n}\n\npub async fn create_user(pool: &PgPool, name: &str, email: &str) -> Result<User, sqlx::Error> {\n    sqlx::query_as::<_, User>(\n        \"INSERT INTO users(name,email) VALUES($1,$2) RETURNING *\"\n    )\n    .bind(name).bind(email)\n    .fetch_one(pool).await\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# GO — more patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "go", "topic": "patterns", "keywords": ["functional options", "with options", "options pattern", "go"],
+     "snippets": [
+         "// Functional options pattern\ntype Server struct {\n\thost    string\n\tport    int\n\ttimeout time.Duration\n\tmaxConn int\n}\n\ntype Option func(*Server)\n\nfunc WithHost(h string)           Option { return func(s *Server) { s.host = h } }\nfunc WithPort(p int)               Option { return func(s *Server) { s.port = p } }\nfunc WithTimeout(d time.Duration) Option { return func(s *Server) { s.timeout = d } }\n\nfunc NewServer(opts ...Option) *Server {\n\ts := &Server{host: \"localhost\", port: 8080, timeout: 30 * time.Second}\n\tfor _, opt := range opts { opt(s) }\n\treturn s\n}\n\nsrv := NewServer(WithPort(9000), WithTimeout(60*time.Second))",
+         "// Go generics (Go 1.18+)\npackage main\n\nfunc Map[T, U any](slice []T, fn func(T) U) []U {\n\tresult := make([]U, len(slice))\n\tfor i, v := range slice { result[i] = fn(v) }\n\treturn result\n}\n\nfunc Filter[T any](slice []T, pred func(T) bool) []T {\n\tvar result []T\n\tfor _, v := range slice { if pred(v) { result = append(result, v) } }\n\treturn result\n}\n\nfunc Reduce[T, U any](slice []T, init U, fn func(U, T) U) U {\n\tacc := init\n\tfor _, v := range slice { acc = fn(acc, v) }\n\treturn acc\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — more stdlib
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "struct_bytes", "keywords": ["struct", "bytes", "binary", "pack", "unpack", "python"],
+     "snippets": [
+         "import struct\n\n# Pack binary data\nheader = struct.pack('>4sHHI', b'MAGIC', 1, 2, 1024)\nprint(f'Packed: {len(header)} bytes')\n\n# Unpack\nmagic, major, minor, size = struct.unpack('>4sHHI', header)\nprint(magic, major, minor, size)\n\n# Struct format chars:\n# > big-endian, < little-endian\n# b/B: signed/unsigned byte\n# h/H: short (2 bytes)\n# i/I: int   (4 bytes)\n# q/Q: long  (8 bytes)\n# f/d: float/double\n# s: char[]  — e.g., '4s' = 4 bytes\n# x: pad byte",
+         "import io\nimport struct\n\nclass BinaryWriter:\n    def __init__(self):\n        self._buf = io.BytesIO()\n\n    def write_u8(self, v: int):  self._buf.write(struct.pack('B', v))\n    def write_u16(self, v: int): self._buf.write(struct.pack('>H', v))\n    def write_u32(self, v: int): self._buf.write(struct.pack('>I', v))\n    def write_str(self, s: str):\n        b = s.encode('utf-8')\n        self.write_u16(len(b))\n        self._buf.write(b)\n\n    def getvalue(self) -> bytes:\n        return self._buf.getvalue()",
+     ]},
+    {"lang": "python", "topic": "abstract_syntax_tree", "keywords": ["ast", "parse", "code analysis", "transpiler", "python"],
+     "snippets": [
+         "import ast\n\ncode = '''\ndef factorial(n):\n    if n <= 1: return 1\n    return n * factorial(n - 1)\n'''\n\ntree = ast.parse(code)\nprint(ast.dump(tree, indent=2))\n\n# Count function definitions\nfuncs = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]\nprint('Functions:', funcs)\n\n# Find all names used\nnames = {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}",
+         "import ast\n\nclass ConstantFolder(ast.NodeTransformer):\n    \"\"\"Fold constant arithmetic: 2 + 3 → 5\"\"\"\n    def visit_BinOp(self, node):\n        self.generic_visit(node)  # recurse first\n        if isinstance(node.left,  ast.Constant) and \\\n           isinstance(node.right, ast.Constant):\n            try:\n                result = eval(compile(ast.Expression(node), '', 'eval'))\n                return ast.Constant(value=result)\n            except Exception:\n                pass\n        return node\n\ntree    = ast.parse('x = 2 + 3 * 4')\nfolded  = ConstantFolder().visit(tree)\nprint(ast.unparse(folded))  # x = 14",
+     ]},
+    {"lang": "python", "topic": "socket_networking", "keywords": ["socket", "tcp", "udp", "server", "client", "python"],
+     "snippets": [
+         "import socket\nimport threading\n\ndef handle_client(conn, addr):\n    with conn:\n        print(f'Connected: {addr}')\n        while data := conn.recv(4096):\n            conn.sendall(data.upper())  # echo upper-case\n\n# TCP server\nwith socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:\n    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n    server.bind(('0.0.0.0', 9000))\n    server.listen()\n    print('Listening on :9000')\n    while True:\n        conn, addr = server.accept()\n        threading.Thread(target=handle_client, args=(conn, addr), daemon=True).start()",
+         "import asyncio\n\nasync def echo_server(reader, writer):\n    addr = writer.get_extra_info('peername')\n    print(f'Connected: {addr}')\n    try:\n        while data := await reader.read(4096):\n            writer.write(data.upper())\n            await writer.drain()\n    except asyncio.IncompleteReadError:\n        pass\n    finally:\n        writer.close()\n\nasync def main():\n    server = await asyncio.start_server(echo_server, '0.0.0.0', 9000)\n    async with server:\n        await server.serve_forever()\n\nasyncio.run(main())",
+     ]},
+    {"lang": "python", "topic": "ctypes_cffi", "keywords": ["ctypes", "cffi", "c extension", "ffi", "python"],
+     "snippets": [
+         "import ctypes\n\n# Call C stdlib\nlibc = ctypes.CDLL('libc.so.6')\nlibc.printf(b'Hello from C!\\n')\n\n# Define C function signature\nlibc.malloc.restype  = ctypes.c_void_p\nlibc.malloc.argtypes = [ctypes.c_size_t]\nlibc.free.argtypes   = [ctypes.c_void_p]\n\n# C struct\nclass Point(ctypes.Structure):\n    _fields_ = [('x', ctypes.c_double), ('y', ctypes.c_double)]\n\np = Point(1.5, 2.5)\nprint(p.x, p.y)\n\n# Load custom shared library\nmylib = ctypes.CDLL('./mylib.so')\nresult = mylib.add_ints(ctypes.c_int(3), ctypes.c_int(4))",
+     ]},
+    {"lang": "python", "topic": "pickle_shelve", "keywords": ["pickle", "shelve", "serialization", "persistence", "python"],
+     "snippets": [
+         "import pickle\nimport shelve\n\n# Pickle serialisation\ndata = {'model': trained_model, 'params': {'lr': 0.001}}\nwith open('checkpoint.pkl', 'wb') as f:\n    pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)\n\nwith open('checkpoint.pkl', 'rb') as f:\n    loaded = pickle.load(f)\n\n# Shelve — persistent dict\nwith shelve.open('cache.db') as db:\n    db['user_1'] = {'name': 'Alice', 'score': 95}\n    db['user_2'] = {'name': 'Bob',   'score': 87}\n\nwith shelve.open('cache.db') as db:\n    print(db['user_1']['name'])  # Alice",
+     ]},
+    {"lang": "python", "topic": "hashlib_hmac", "keywords": ["hashlib", "hmac", "sha256", "md5", "signature", "python"],
+     "snippets": [
+         "import hashlib\nimport hmac\nimport secrets\n\n# Hash data\ndata = b'important message'\nsha256 = hashlib.sha256(data).hexdigest()\nmd5    = hashlib.md5(data).hexdigest()\n\n# File checksum\ndef file_checksum(path: str, algo='sha256') -> str:\n    h = hashlib.new(algo)\n    with open(path, 'rb') as f:\n        for chunk in iter(lambda: f.read(65536), b''):\n            h.update(chunk)\n    return h.hexdigest()\n\n# HMAC signature\nsecret = secrets.token_bytes(32)\nsig    = hmac.new(secret, data, hashlib.sha256).hexdigest()\nvalid  = hmac.compare_digest(sig, expected_sig)  # timing-safe",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — ORM patterns / database
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "alembic", "keywords": ["alembic", "migration", "schema", "upgrade", "python"],
+     "snippets": [
+         "# Alembic migration\n# alembic revision --autogenerate -m 'add users table'\n\n\"\"\"add users table\nRevision ID: abc123\n\"\"\"\nfrom alembic import op\nimport sqlalchemy as sa\n\ndef upgrade():\n    op.create_table(\n        'users',\n        sa.Column('id',         sa.Integer,     primary_key=True),\n        sa.Column('name',       sa.String(100),  nullable=False),\n        sa.Column('email',      sa.String(255),  nullable=False, unique=True),\n        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now()),\n    )\n    op.create_index('ix_users_email', 'users', ['email'])\n\ndef downgrade():\n    op.drop_table('users')",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# JAVASCRIPT — more patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "javascript", "topic": "design_patterns_js", "keywords": ["pub sub", "observer", "singleton", "factory", "javascript"],
+     "snippets": [
+         "// Pub/Sub (Event Bus)\nconst EventBus = (() => {\n  const events = new Map();\n  return {\n    on(event, handler) {\n      if (!events.has(event)) events.set(event, new Set());\n      events.get(event).add(handler);\n      return () => events.get(event).delete(handler); // unsubscribe\n    },\n    emit(event, data) {\n      events.get(event)?.forEach(h => h(data));\n    },\n    once(event, handler) {\n      const unsub = this.on(event, data => { handler(data); unsub(); });\n    }\n  };\n})();\n\nconst unsub = EventBus.on('user:login', u => console.log('Login:', u));\nEventBus.emit('user:login', { id: 1, name: 'Alice' });\nunsub(); // remove listener",
+         "// Memoization and debounce/throttle\nconst memoize = fn => {\n  const cache = new Map();\n  return (...args) => {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) return cache.get(key);\n    const result = fn(...args);\n    cache.set(key, result);\n    return result;\n  };\n};\n\nconst debounce = (fn, ms) => {\n  let timer;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), ms);\n  };\n};\n\nconst throttle = (fn, ms) => {\n  let last = 0;\n  return (...args) => {\n    const now = Date.now();\n    if (now - last >= ms) { last = now; return fn(...args); }\n  };\n};",
+         "// Immutable update patterns\nconst state = { user: { name: 'Alice', prefs: { theme: 'dark' } }, count: 0 };\n\n// Immutable update (spread)\nconst newState = {\n  ...state,\n  count: state.count + 1,\n  user: {\n    ...state.user,\n    prefs: { ...state.user.prefs, theme: 'light' }\n  }\n};\n\n// Using structuredClone for deep copy\nconst deepCopy = structuredClone(state);\ndeepcopy.user.prefs.theme = 'auto'; // doesn't affect original",
+     ]},
+    {"lang": "javascript", "topic": "testing", "keywords": ["jest", "vitest", "test", "mock", "javascript"],
+     "snippets": [
+         "// Jest / Vitest tests\nimport { describe, it, expect, vi, beforeEach } from 'vitest';\n\ndescribe('UserService', () => {\n  let mockDb;\n  let service;\n\n  beforeEach(() => {\n    mockDb = { findById: vi.fn(), create: vi.fn() };\n    service = new UserService(mockDb);\n  });\n\n  it('returns user by id', async () => {\n    mockDb.findById.mockResolvedValue({ id: 1, name: 'Alice' });\n    const user = await service.getUser(1);\n    expect(user.name).toBe('Alice');\n    expect(mockDb.findById).toHaveBeenCalledWith(1);\n  });\n\n  it('throws when user not found', async () => {\n    mockDb.findById.mockResolvedValue(null);\n    await expect(service.getUser(99)).rejects.toThrow('Not found');\n  });\n});",
+     ]},
+    {"lang": "javascript", "topic": "typescript_runtime", "keywords": ["zod", "validation", "runtime type", "schema", "typescript"],
+     "snippets": [
+         "// Zod runtime validation\nimport { z } from 'zod';\n\nconst UserSchema = z.object({\n  id:    z.number().int().positive(),\n  name:  z.string().min(2).max(100),\n  email: z.string().email(),\n  age:   z.number().min(0).max(150).optional(),\n  role:  z.enum(['user', 'admin', 'moderator']).default('user'),\n});\n\ntype User = z.infer<typeof UserSchema>;\n\nconst result = UserSchema.safeParse(req.body);\nif (!result.success) {\n  return res.status(422).json({ errors: result.error.flatten() });\n}\nconst user: User = result.data;",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# CSS / HTML — more patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "css", "topic": "accessibility", "keywords": ["accessibility", "aria", "wcag", "a11y", "css"],
+     "snippets": [
+         "/* Accessibility patterns */\n\n/* Focus visible — keyboard navigation */\n:focus-visible {\n  outline: 3px solid #005fcc;\n  outline-offset: 2px;\n}\n\n/* Skip link */\n.skip-link {\n  position: absolute;\n  top: -100%;\n  left: 0;\n  background: #000;\n  color: #fff;\n  padding: 1rem;\n  z-index: 9999;\n}\n.skip-link:focus { top: 0; }\n\n/* High contrast mode */\n@media (prefers-contrast: high) {\n  .btn { border: 2px solid currentColor; }\n}\n\n/* Reduced motion */\n@media (prefers-reduced-motion: reduce) {\n  *, *::before, *::after {\n    animation-duration:  0.01ms !important;\n    transition-duration: 0.01ms !important;\n  }\n}",
+         "/* CSS custom properties advanced */\n:root {\n  --hue:  220;\n  --sat:  70%;\n  --lit:  55%;\n  --primary:    hsl(var(--hue) var(--sat) var(--lit));\n  --primary-10: hsl(var(--hue) var(--sat) calc(var(--lit) - 10%));\n  --primary-90: hsl(var(--hue) var(--sat) 90%);\n\n  --spacing-xs:   0.25rem;\n  --spacing-sm:   0.5rem;\n  --spacing-md:   1rem;\n  --spacing-lg:   1.5rem;\n  --spacing-xl:   2rem;\n  --spacing-2xl:  3rem;\n\n  --radius-sm: 0.25rem;\n  --radius-md: 0.375rem;\n  --radius-lg: 0.5rem;\n  --radius-full: 9999px;\n\n  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05);\n  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);\n  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1);\n}",
+     ]},
+    {"lang": "html", "topic": "web_components", "keywords": ["web components", "custom element", "shadow dom", "slot", "html"],
+     "snippets": [
+         "<!-- Web Components -->\nclass MyCard extends HTMLElement {\n  static observedAttributes = ['title', 'theme'];\n\n  constructor() {\n    super();\n    this.attachShadow({ mode: 'open' });\n  }\n\n  connectedCallback() {\n    this.render();\n  }\n\n  attributeChangedCallback() {\n    this.render();\n  }\n\n  render() {\n    this.shadowRoot.innerHTML = `\n      <style>\n        :host { display: block; border-radius: 8px; }\n        .card { padding: 1rem; background: var(--bg, white); }\n      </style>\n      <div class=\"card\">\n        <h2>${this.getAttribute('title')}</h2>\n        <slot></slot>\n      </div>\n    `;\n  }\n}\ncustomElements.define('my-card', MyCard);",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DATABASES — Redis advanced patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "redis_advanced", "keywords": ["redis", "sorted set", "lua script", "pipeline", "python"],
+     "snippets": [
+         "import redis.asyncio as redis\n\nr = redis.Redis.from_url('redis://localhost:6379')\n\n# Sorted set — leaderboard\nasync def add_score(user_id: str, score: float):\n    await r.zadd('leaderboard', {user_id: score})\n\nasync def top_players(n: int = 10):\n    return await r.zrevrangebyscore('leaderboard', '+inf', '-inf',\n                                    start=0, num=n, withscores=True)\n\n# Pipeline — batch commands\nasync def batch_update(updates: dict):\n    async with r.pipeline(transaction=True) as pipe:\n        for key, value in updates.items():\n            pipe.set(key, value, ex=3600)\n        await pipe.execute()\n\n# Distributed lock\nasync def with_lock(key: str, ttl: int = 30):\n    token = str(uuid.uuid4())\n    acquired = await r.set(f'lock:{key}', token, nx=True, ex=ttl)\n    if not acquired: raise RuntimeError('Could not acquire lock')\n    try: yield\n    finally: await r.delete(f'lock:{key}')",
+         "# Redis streams (log / event stream)\nimport redis.asyncio as redis\n\nr = redis.Redis()\n\nasync def publish_event(stream: str, event: dict):\n    msg_id = await r.xadd(stream, event, maxlen=10000, approximate=True)\n    return msg_id\n\nasync def consume_events(stream: str, group: str, consumer: str):\n    # Create consumer group\n    try: await r.xgroup_create(stream, group, id='0', mkstream=True)\n    except: pass  # already exists\n\n    while True:\n        messages = await r.xreadgroup(group, consumer, {stream: '>'}, count=10)\n        for _, msgs in messages:\n            for msg_id, data in msgs:\n                await process(data)\n                await r.xack(stream, group, msg_id)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — async patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "aiohttp", "keywords": ["aiohttp", "async http", "client", "server", "python"],
+     "snippets": [
+         "import aiohttp\nimport asyncio\n\nasync def fetch_json(url: str, session: aiohttp.ClientSession) -> dict:\n    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as r:\n        r.raise_for_status()\n        return await r.json()\n\nasync def fetch_all(urls: list[str]) -> list[dict]:\n    async with aiohttp.ClientSession() as session:\n        tasks = [fetch_json(u, session) for u in urls]\n        return await asyncio.gather(*tasks, return_exceptions=True)\n\n# aiohttp server\nfrom aiohttp import web\n\nasync def handle(request: web.Request) -> web.Response:\n    name = request.match_info.get('name', 'World')\n    return web.json_response({'message': f'Hello, {name}!'})\n\napp = web.Application()\napp.router.add_get('/hello/{name}', handle)\nweb.run_app(app, port=8080)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# KOTLIN — Flows and Coroutines advanced
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "kotlin", "topic": "flows", "keywords": ["flow", "stateflow", "collect", "coroutine", "kotlin"],
+     "snippets": [
+         "import kotlinx.coroutines.*\nimport kotlinx.coroutines.flow.*\n\n// Cold flow\nfun numbersFlow(): Flow<Int> = flow {\n    for (i in 1..5) {\n        delay(100)\n        emit(i)\n    }\n}\n\n// StateFlow — hot, retains last value\nval _state = MutableStateFlow(0)\nval state: StateFlow<Int> = _state.asStateFlow()\n\nrunBlocking {\n    numbersFlow()\n        .filter { it % 2 == 0 }\n        .map { it * it }\n        .collect { println(it) }  // 4, 16\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# SWIFT — more patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "swift", "topic": "combine", "keywords": ["combine", "publisher", "subscriber", "reactive", "swift"],
+     "snippets": [
+         "import Combine\nimport Foundation\n\n// Combine framework\nlet numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\nvar cancellables = Set<AnyCancellable>()\n\nnumbers.publisher\n    .filter { $0 % 2 == 0 }\n    .map { $0 * $0 }\n    .collect()\n    .sink { print($0) }  // [4, 16, 36, 64, 100]\n    .store(in: &cancellables)\n\n// URLSession publisher\nURLSession.shared\n    .dataTaskPublisher(for: URL(string: \"https://api.example.com/users\")!)\n    .map(\\.data)\n    .decode(type: [User].self, decoder: JSONDecoder())\n    .receive(on: DispatchQueue.main)\n    .sink(receiveCompletion: { _ in },\n          receiveValue: { users in print(users.count) })\n    .store(in: &cancellables)",
+     ]},
+    {"lang": "swift", "topic": "swiftui", "keywords": ["swiftui", "view", "state", "binding", "swift"],
+     "snippets": [
+         "import SwiftUI\n\nstruct UserListView: View {\n    @StateObject var viewModel = UserViewModel()\n\n    var body: some View {\n        NavigationView {\n            List(viewModel.users) { user in\n                NavigationLink(destination: UserDetailView(user: user)) {\n                    HStack {\n                        AsyncImage(url: URL(string: user.avatarURL)) { img in\n                            img.resizable().scaledToFill()\n                        } placeholder: { Color.gray }\n                        .frame(width: 44, height: 44)\n                        .clipShape(Circle())\n                        VStack(alignment: .leading) {\n                            Text(user.name).font(.headline)\n                            Text(user.email).font(.caption).foregroundColor(.secondary)\n                        }\n                    }\n                }\n            }\n            .navigationTitle(\"Users\")\n            .task { await viewModel.fetchUsers() }\n        }\n    }\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PHP — more modern PHP
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "php", "topic": "laravel", "keywords": ["laravel", "eloquent", "route", "middleware", "php"],
+     "snippets": [
+         "<?php\n// Laravel Eloquent Model\nnamespace App\\Models;\nuse Illuminate\\Database\\Eloquent\\Model;\nuse Illuminate\\Database\\Eloquent\\SoftDeletes;\n\nclass User extends Model {\n    use SoftDeletes;\n\n    protected $fillable = ['name', 'email', 'role'];\n    protected $hidden   = ['password', 'remember_token'];\n    protected $casts    = ['email_verified_at' => 'datetime', 'active' => 'boolean'];\n\n    public function posts() {\n        return $this->hasMany(Post::class);\n    }\n    public function scopeActive($query) {\n        return $query->where('active', true);\n    }\n}",
+         "<?php\n// Laravel API Controller\nnamespace App\\Http\\Controllers;\nuse App\\Models\\User;\nuse App\\Http\\Requests\\CreateUserRequest;\nuse App\\Http\\Resources\\UserResource;\n\nclass UserController extends Controller {\n    public function index() {\n        $users = User::active()->paginate(20);\n        return UserResource::collection($users);\n    }\n\n    public function store(CreateUserRequest $request) {\n        $user = User::create([\n            'name'     => $request->name,\n            'email'    => $request->email,\n            'password' => bcrypt($request->password),\n        ]);\n        return new UserResource($user);\n    }\n\n    public function destroy(User $user) {\n        $user->delete();\n        return response()->noContent();\n    }\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DATABASE — more advanced patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "sql", "topic": "performance", "keywords": ["index", "explain", "query plan", "vacuum", "sql"],
+     "snippets": [
+         "-- Index types in PostgreSQL\n-- B-tree (default) — range, equality, sorting\nCREATE INDEX idx_users_email ON users(email);\n\n-- Partial index — only index active users\nCREATE INDEX idx_active_users ON users(email) WHERE active = true;\n\n-- Expression index\nCREATE INDEX idx_users_lower_email ON users(LOWER(email));\n\n-- Composite index — order matters!\nCREATE INDEX idx_orders_user_date ON orders(user_id, created_at DESC);\n\n-- GIN for JSONB / arrays / full-text\nCREATE INDEX idx_products_tags ON products USING GIN(tags);\nCREATE INDEX idx_docs_fts ON documents USING GIN(to_tsvector('english', content));\n\n-- Check query plan\nEXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)\nSELECT * FROM orders WHERE user_id = 1 AND status = 'pending';",
+         "-- PostgreSQL connection pooling config (pgBouncer)\n-- pgbouncer.ini\n-- [databases]\n-- mydb = host=localhost port=5432 dbname=mydb\n-- [pgbouncer]\n-- pool_mode = transaction\n-- max_client_conn = 1000\n-- default_pool_size = 20\n-- min_pool_size = 5\n\n-- Check active connections\nSELECT count(*), state, wait_event_type, wait_event\nFROM pg_stat_activity\nGROUP BY state, wait_event_type, wait_event\nORDER BY count DESC;\n\n-- Kill long-running queries\nSELECT pg_terminate_backend(pid)\nFROM pg_stat_activity\nWHERE state = 'active'\n  AND query_start < NOW() - INTERVAL '5 minutes'\n  AND pid <> pg_backend_pid();",
+         "-- Database sharding strategy\n-- Horizontal partitioning by user_id range\nCREATE TABLE users_0_10m PARTITION OF users\n  FOR VALUES FROM (0) TO (10000000);\nCREATE TABLE users_10m_20m PARTITION OF users\n  FOR VALUES FROM (10000000) TO (20000000);\n\n-- Hash partitioning (distribute evenly)\nCREATE TABLE orders (\n  id      BIGSERIAL,\n  user_id INT NOT NULL\n) PARTITION BY HASH(user_id);\n\nCREATE TABLE orders_p0 PARTITION OF orders\n  FOR VALUES WITH (MODULUS 4, REMAINDER 0);\nCREATE TABLE orders_p1 PARTITION OF orders\n  FOR VALUES WITH (MODULUS 4, REMAINDER 1);",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# NETWORK PROTOCOLS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "http_server", "keywords": ["http", "server", "wsgi", "asgi", "uvicorn", "python"],
+     "snippets": [
+         "# Minimal ASGI app (no framework)\nasync def app(scope, receive, send):\n    if scope['type'] == 'http':\n        body = b'Hello, World!'\n        await send({'type': 'http.response.start', 'status': 200,\n                    'headers': [(b'content-type', b'text/plain'),\n                                (b'content-length', str(len(body)).encode())]})\n        await send({'type': 'http.response.body', 'body': body})\n\n# Run: uvicorn app:app --port 8000\n\n# Minimal WSGI\ndef application(environ, start_response):\n    status = '200 OK'\n    headers = [('Content-type', 'text/plain')]\n    start_response(status, headers)\n    return [b'Hello World']",
+         "# HTTP/2 with h2 library\nimport asyncio, ssl, h2.config, h2.connection, h2.events\n\nctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)\nctx.load_cert_chain('server.crt', 'server.key')\nctx.set_alpn_protocols(['h2', 'http/1.1'])\n\nconfig = h2.config.H2Configuration(client_side=False)\n\nasync def handle(reader, writer):\n    conn = h2.connection.H2Connection(config=config)\n    conn.initiate_connection()\n    writer.write(conn.data_to_send())\n    # ... handle events ...",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DEVOPS — more tools
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "yaml", "topic": "ansible", "keywords": ["ansible", "playbook", "task", "role", "devops"],
+     "snippets": [
+         "# Ansible playbook\n---\n- name: Deploy web application\n  hosts: webservers\n  become: true\n  vars:\n    app_dir: /opt/myapp\n    python_version: '3.12'\n\n  tasks:\n    - name: Install dependencies\n      apt:\n        name: [python3, nginx, git]\n        state: present\n        update_cache: true\n\n    - name: Clone repository\n      git:\n        repo: https://github.com/org/app.git\n        dest: '{{ app_dir }}'\n        version: main\n      notify: Restart app\n\n    - name: Create systemd service\n      template:\n        src: templates/app.service.j2\n        dest: /etc/systemd/system/myapp.service\n      notify: Reload systemd\n\n  handlers:\n    - name: Restart app\n      systemd: name=myapp state=restarted\n    - name: Reload systemd\n      systemd: daemon_reload=true",
+         "# docker-compose production template\nservices:\n  traefik:\n    image: traefik:v3\n    command:\n      - '--providers.docker=true'\n      - '--entrypoints.web.address=:80'\n      - '--entrypoints.websecure.address=:443'\n      - '--certificatesresolvers.le.acme.email=admin@example.com'\n      - '--certificatesresolvers.le.acme.storage=/certs/acme.json'\n      - '--certificatesresolvers.le.acme.httpchallenge.entrypoint=web'\n    ports: ['80:80', '443:443']\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock:ro\n      - certs:/certs\n\n  api:\n    build: .\n    labels:\n      - 'traefik.http.routers.api.rule=Host(`api.example.com`)'\n      - 'traefik.http.routers.api.tls.certresolver=le'\n    environment:\n      DATABASE_URL: ${DATABASE_URL}\n    depends_on: [db]\n\nvolumes:\n  certs:",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# COMPUTER SCIENCE THEORY
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "complexity_theory", "keywords": ["big O", "time complexity", "space complexity", "analysis"],
+     "snippets": [
+         "# Algorithm complexity reference\n# O(1)      — array index, hash lookup, stack push/pop\n# O(log n)  — binary search, balanced BST ops, heap ops\n# O(n)      — linear scan, single-pass algorithms\n# O(n log n)— merge sort, heap sort, most comparison sorts\n# O(n²)     — bubble sort, selection sort, nested loops\n# O(n³)     — Floyd-Warshall, naive matrix multiply\n# O(2ⁿ)     — subset enumeration, naive recursion (fib)\n# O(n!)     — permutation generation, travelling salesman\n\n# Space complexity\n# O(1) extra — in-place algorithms (selection sort)\n# O(log n)   — recursive binary search (call stack)\n# O(n)       — merge sort, BFS, storing results\n# O(n²)      — DP tables (Floyd-Warshall, edit distance)",
+         "# Master theorem for recurrences T(n) = aT(n/b) + f(n)\n# Case 1: f(n) = O(n^(log_b a - ε)) → T(n) = Θ(n^log_b a)\n# Case 2: f(n) = Θ(n^log_b a)       → T(n) = Θ(n^log_b a * log n)\n# Case 3: f(n) = Ω(n^(log_b a + ε)) → T(n) = Θ(f(n))\n\n# Examples:\n# Merge sort:   T(n) = 2T(n/2) + O(n)   → O(n log n)\n# Binary search: T(n) = T(n/2) + O(1)   → O(log n)\n# Strassen:     T(n) = 7T(n/2) + O(n²)  → O(n^2.807)",
+     ]},
+    {"lang": "python", "topic": "concurrency_patterns", "keywords": ["actor model", "CSP", "futures", "promises", "concurrency"],
+     "snippets": [
+         "# Actor model with asyncio\nimport asyncio\nfrom typing import Any\n\nclass Actor:\n    def __init__(self):\n        self._mailbox: asyncio.Queue = asyncio.Queue()\n        self._running = False\n\n    async def send(self, message: Any):\n        await self._mailbox.put(message)\n\n    async def run(self):\n        self._running = True\n        while self._running:\n            msg = await self._mailbox.get()\n            await self.handle(msg)\n\n    async def handle(self, msg): raise NotImplementedError\n    def stop(self): self._running = False\n\nclass CounterActor(Actor):\n    def __init__(self): super().__init__(); self.count = 0\n    async def handle(self, msg):\n        if msg == 'inc':  self.count += 1\n        elif msg == 'get': print(self.count)",
+         "# Thread-safe producer-consumer with condition variable\nimport threading\n\nclass BoundedQueue:\n    def __init__(self, maxsize: int):\n        self._queue = []\n        self._maxsize = maxsize\n        self._lock = threading.Lock()\n        self._not_full  = threading.Condition(self._lock)\n        self._not_empty = threading.Condition(self._lock)\n\n    def put(self, item):\n        with self._not_full:\n            while len(self._queue) >= self._maxsize:\n                self._not_full.wait()\n            self._queue.append(item)\n            self._not_empty.notify()\n\n    def get(self):\n        with self._not_empty:\n            while not self._queue:\n                self._not_empty.wait()\n            item = self._queue.pop(0)\n            self._not_full.notify()\n            return item",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# GAME DEVELOPMENT
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "pygame", "keywords": ["pygame", "game", "sprite", "collision", "loop", "python"],
+     "snippets": [
+         "import pygame\nfrom dataclasses import dataclass, field\nfrom typing import Tuple\n\n@dataclass\nclass Entity:\n    x: float; y: float\n    vx: float = 0; vy: float = 0\n    width: int = 32; height: int = 32\n    color: Tuple = (255, 0, 0)\n\n    @property\n    def rect(self): return pygame.Rect(self.x, self.y, self.width, self.height)\n    def update(self, dt: float):\n        self.x += self.vx * dt; self.y += self.vy * dt\n    def draw(self, surface):\n        pygame.draw.rect(surface, self.color, self.rect)\n\ndef main():\n    pygame.init()\n    screen = pygame.display.set_mode((800, 600))\n    clock  = pygame.time.Clock()\n    player = Entity(400, 300, color=(0, 128, 255))\n    running = True\n    while running:\n        dt = clock.tick(60) / 1000\n        for event in pygame.event.get():\n            if event.type == pygame.QUIT: running = False\n        keys = pygame.key.get_pressed()\n        player.vx = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * 200\n        player.vy = (keys[pygame.K_DOWN]  - keys[pygame.K_UP])   * 200\n        player.update(dt)\n        screen.fill((20, 20, 20))\n        player.draw(screen)\n        pygame.display.flip()",
+     ]},
+    {"lang": "javascript", "topic": "threejs", "keywords": ["three.js", "webgl", "3d", "scene", "renderer"],
+     "snippets": [
+         "// Three.js 3D scene\nimport * as THREE from 'three';\nimport { OrbitControls } from 'three/addons/controls/OrbitControls.js';\n\nconst scene    = new THREE.Scene();\nconst camera   = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);\nconst renderer = new THREE.WebGLRenderer({ antialias: true });\nrenderer.setSize(window.innerWidth, window.innerHeight);\ndocument.body.appendChild(renderer.domElement);\n\n// Mesh\nconst geometry  = new THREE.BoxGeometry(1, 1, 1);\nconst material  = new THREE.MeshPhongMaterial({ color: 0x3b82f6 });\nconst cube      = new THREE.Mesh(geometry, material);\nscene.add(cube);\n\n// Lighting\nscene.add(new THREE.AmbientLight(0xffffff, 0.5));\nconst light = new THREE.DirectionalLight(0xffffff, 1);\nlight.position.set(5, 5, 5);\nscene.add(light);\n\ncamera.position.z = 3;\nconst controls = new OrbitControls(camera, renderer.domElement);\n\nfunction animate() {\n  requestAnimationFrame(animate);\n  cube.rotation.x += 0.01;\n  cube.rotation.y += 0.01;\n  renderer.render(scene, camera);\n}\nanimate();",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# CRYPTOGRAPHY
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "cryptography", "keywords": ["cryptography", "aes", "rsa", "elliptic curve", "encryption"],
+     "snippets": [
+         "from cryptography.fernet import Fernet\nfrom cryptography.hazmat.primitives.asymmetric import rsa, padding\nfrom cryptography.hazmat.primitives import hashes, serialization\n\n# Symmetric encryption (Fernet = AES-128-CBC + HMAC)\nkey     = Fernet.generate_key()\ncipher  = Fernet(key)\ntoken   = cipher.encrypt(b'secret message')\nplain   = cipher.decrypt(token)\n\n# RSA key pair\nprivate_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)\npublic_key  = private_key.public_key()\n\n# Encrypt / decrypt\nciphertext = public_key.encrypt(\n    b'secret', padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None)\n)\nplaintext = private_key.decrypt(ciphertext, padding.OAEP(\n    mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None\n))\n\n# Sign / verify\nsignature = private_key.sign(b'message', padding.PSS(\n    mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH\n), hashes.SHA256())",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# CLOUD PATTERNS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "aws_boto3", "keywords": ["aws", "boto3", "s3", "lambda", "dynamodb", "python"],
+     "snippets": [
+         "import boto3\nfrom botocore.exceptions import ClientError\n\n# S3 operations\ns3 = boto3.client('s3', region_name='us-east-1')\n\ndef upload_file(local_path: str, bucket: str, key: str):\n    s3.upload_file(local_path, bucket, key,\n                   ExtraArgs={'ContentType': 'application/json'})\n\ndef download_file(bucket: str, key: str, local_path: str):\n    try:\n        s3.download_file(bucket, key, local_path)\n    except ClientError as e:\n        if e.response['Error']['Code'] == '404': raise FileNotFoundError(key)\n        raise\n\n# Presigned URL\ndef get_presigned_url(bucket: str, key: str, expires: int = 3600) -> str:\n    return s3.generate_presigned_url('get_object',\n        Params={'Bucket': bucket, 'Key': key}, ExpiresIn=expires)",
+         "import boto3\n\n# DynamoDB\ndynamodb = boto3.resource('dynamodb')\ntable    = dynamodb.Table('users')\n\n# Put / Get / Query\ndef put_user(user: dict): table.put_item(Item=user)\ndef get_user(user_id: str): return table.get_item(Key={'id': user_id}).get('Item')\n\ndef query_by_email(email: str):\n    return table.query(\n        IndexName='email-index',\n        KeyConditionExpression='email = :email',\n        ExpressionAttributeValues={':email': email}\n    )['Items']\n\n# SQS\nsqs   = boto3.client('sqs')\nqueue = sqs.get_queue_url(QueueName='my-queue')['QueueUrl']\n\nsqs.send_message(QueueUrl=queue, MessageBody=json.dumps({'type': 'order', 'id': 1}))\nmsgs  = sqs.receive_message(QueueUrl=queue, MaxNumberOfMessages=10).get('Messages', [])",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# LINUX INTERNALS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "bash", "topic": "linux_internals", "keywords": ["proc", "cgroups", "namespaces", "seccomp", "linux"],
+     "snippets": [
+         "# Linux /proc filesystem\ncat /proc/$$/status          # process info\ncat /proc/$$/maps            # memory maps\ncat /proc/$$/fd              # open file descriptors\ncat /proc/cpuinfo            # CPU details\ncat /proc/meminfo            # memory details\ncat /proc/net/tcp            # TCP connections\n\n# cgroups v2 — resource limits\nmkdir /sys/fs/cgroup/mygroup\necho $$ > /sys/fs/cgroup/mygroup/cgroup.procs\necho '512M' > /sys/fs/cgroup/mygroup/memory.max\necho '100000 1000000' > /sys/fs/cgroup/mygroup/cpu.max\n\n# Namespaces — isolate a process\nunshare --pid --mount --uts --ipc --net --fork --mount-proc /bin/bash\n\n# strace — trace system calls\nstrace -e trace=network,file -p $(pgrep python)",
+         "# eBPF tracing (bpftrace)\n# Count syscalls by process\nbpftrace -e 'tracepoint:syscalls:sys_enter_* { @[comm] = count(); }'\n\n# Latency histogram for read()\nbpftrace -e '\ntracepoint:syscalls:sys_enter_read { @start[tid] = nsecs; }\ntracepoint:syscalls:sys_exit_read  /@start[tid]/\n  { @ns = hist(nsecs - @start[tid]); delete(@start[tid]); }'\n\n# perf profiling\nperf record -g -p $(pgrep python) sleep 30\nperf report --stdio | head -50\n\n# flamegraph\nperf script | stackcollapse-perf.pl | flamegraph.pl > flame.svg",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# REGEX advanced
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "regex_advanced", "keywords": ["regex", "lookahead", "lookbehind", "named group", "python"],
+     "snippets": [
+         "import re\n\n# Named groups\npattern = r'(?P<year>\\d{4})-(?P<month>\\d{2})-(?P<day>\\d{2})'\nm = re.match(pattern, '2024-03-15')\nprint(m.group('year'), m.group('month'), m.group('day'))\n\n# Lookahead / lookbehind\nprice = re.findall(r'(?<=\\$)[\\d.]+', 'Pay $19.99 or $29.99')\nno_html = re.sub(r'<[^>]+>', '', '<b>Hello</b> <i>World</i>')\n\n# Non-greedy\nhtml = '<tag>first</tag> <tag>second</tag>'\ngreedy    = re.findall(r'<tag>.+</tag>',   html)   # ['first</tag> <tag>second']\nnon_greedy = re.findall(r'<tag>.+?</tag>', html)   # ['first', 'second']",
+         "import re\n\n# Compile for performance\nEMAIL_RE = re.compile(\n    r'^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$',\n    re.IGNORECASE\n)\nURL_RE = re.compile(\n    r'https?://(?:[-\\w.]|(?:%[\\da-fA-F]{2}))+(?:/[^\\s]*)?'\n)\nIPv4_RE = re.compile(\n    r'\\b(?:(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\.){3}(?:25[0-5]|2[0-4]\\d|[01]?\\d\\d?)\\b'\n)\n\n# Conditional substitution\ndef camel_to_snake(name: str) -> str:\n    s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\\1_\\2', name)\n    return re.sub(r'([a-z\\d])([A-Z])', r'\\1_\\2', s).lower()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — interview / LeetCode patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "interview_patterns", "keywords": ["two pointers", "fast slow", "backtracking", "interview", "python"],
+     "snippets": [
+         "# Backtracking template\ndef backtrack(state, choices):\n    if is_goal(state):\n        results.append(state[:])\n        return\n    for choice in choices:\n        if is_valid(state, choice):\n            state.append(choice)\n            backtrack(state, next_choices(state))\n            state.pop()  # undo\n\n# N-Queens\ndef solve_n_queens(n: int) -> list[list[str]]:\n    results, cols, diag1, diag2 = [], set(), set(), set()\n    board = [['.']*n for _ in range(n)]\n    def bt(row):\n        if row == n: results.append([''.join(r) for r in board]); return\n        for col in range(n):\n            if col in cols or (row-col) in diag1 or (row+col) in diag2: continue\n            cols.add(col); diag1.add(row-col); diag2.add(row+col)\n            board[row][col] = 'Q'\n            bt(row+1)\n            cols.discard(col); diag1.discard(row-col); diag2.discard(row+col)\n            board[row][col] = '.'\n    bt(0); return results",
+         "# Monotonic stack patterns\ndef next_greater(nums: list) -> list:\n    result = [-1] * len(nums)\n    stack = []  # indices\n    for i, n in enumerate(nums):\n        while stack and nums[stack[-1]] < n:\n            result[stack.pop()] = n\n        stack.append(i)\n    return result\n\n# Largest rectangle in histogram\ndef largest_rectangle(heights: list) -> int:\n    stack, max_area = [], 0\n    for i, h in enumerate(heights + [0]):\n        while stack and heights[stack[-1]] > h:\n            H = heights[stack.pop()]\n            W = i if not stack else i - stack[-1] - 1\n            max_area = max(max_area, H * W)\n        stack.append(i)\n    return max_area",
+         "# Bit manipulation tricks\nn = 42\nprint(n & (n-1))      # unset lowest set bit\nprint(n & (-n))       # isolate lowest set bit\nprint(n ^ n)          # = 0\nprint(~n + 1)         # = -n (two's complement)\nprint(n >> 1)         # floor(n/2)\nprint(n << 1)         # n*2\nprint(n | (1<<k))     # set bit k\nprint(n & ~(1<<k))    # clear bit k\nprint((n >> k) & 1)   # get bit k\nprint(bin(n).count('1'))  # popcount (number of set bits)",
+     ]},
+]
+
+
 if __name__ == '__main__':
     main()
