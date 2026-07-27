@@ -121,6 +121,11 @@ _WEIGHTS_DIR = _STATE_DIR / "weights"
 _WEIGHTS_FILE = _WEIGHTS_DIR / "neural_core.json"
 _CELLS_FILE = _WEIGHTS_DIR / "cells.json"
 
+# Pre-built knowledge cells shipped with the repository.
+# Loaded once at startup to seed the RAG memory with programming knowledge
+# (Python, JS, SQL, Go, Rust, algorithms, patterns, …).
+_PREBUILT_CELLS_FILE = _REPO_ROOT / "data" / "prebuilt" / "cells.json"
+
 # ---------------------------------------------------------------------------
 # Application state (singletons initialised at startup)
 # ---------------------------------------------------------------------------
@@ -208,6 +213,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             logger.info("Restored %d cells from %s", n, _CELLS_FILE)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Could not load saved cells (%s) — starting empty", exc)
+
+    # --- Load pre-built knowledge cells (shipped with the repo) ---------
+    # These cells contain ~250 high-quality programming snippets covering
+    # Python, JS, TS, SQL, Go, Rust, algorithms, patterns and more.
+    # They boost the RAG search from first request, before any training.
+    if _PREBUILT_CELLS_FILE.exists():
+        try:
+            n_pb = await loop.run_in_executor(
+                None, _memory.load_from_file, _PREBUILT_CELLS_FILE
+            )
+            logger.info("Loaded %d pre-built knowledge cells from %s", n_pb, _PREBUILT_CELLS_FILE)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Could not load pre-built cells (%s)", exc)
 
     # --- GPT-2 for chat -------------------------------------------------
     try:
