@@ -891,5 +891,468 @@ def main():
         print(f"  {lang:20s} {count} cells")
 
 
-if __name__ == "__main__":
+# ===========================================================================
+# EXPANSION BLOCK — adds ~400 more unique cells
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# RUBY
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "ruby", "topic": "basics", "keywords": ["ruby", "class", "block", "gem", "rails"],
+     "snippets": [
+         "# Ruby basics\nname = 'Alice'\nage  = 30\nputs \"Hello, #{name}! You are #{age} years old.\"\n\n# Symbols\nstatus = :active\nhash   = { name: 'Bob', role: :admin }\n\n# Ranges\n(1..10).each { |n| print \"#{n} \" }\nevens = (1..20).select(&:even?)\nsum   = (1..100).sum",
+         "# Classes and modules\nmodule Greetable\n  def greet\n    \"Hello, I am #{name}\"\n  end\nend\n\nclass User\n  include Greetable\n  attr_accessor :name, :email\n\n  def initialize(name, email)\n    @name  = name\n    @email = email\n  end\n\n  def to_s\n    \"User(#{@name})\"\n  end\nend\n\nu = User.new('Alice', 'alice@example.com')\nputs u.greet",
+         "# Blocks, procs, lambdas\ndouble = ->(x) { x * 2 }\nsquare = proc { |x| x**2 }\n\n[1,2,3,4,5].map(&double)     # [2,4,6,8,10]\n[1,2,3,4,5].select(&:odd?)   # [1,3,5]\n[1,2,3].reduce(:+)           # 6\n\ndef measure\n  start = Time.now\n  yield\n  Time.now - start\nend\nelapsed = measure { sleep 0.1 }",
+         "# Rails model\nclass Article < ApplicationRecord\n  belongs_to :user\n  has_many   :comments, dependent: :destroy\n  has_and_belongs_to_many :tags\n\n  validates :title,   presence: true, length: { minimum: 5 }\n  validates :content, presence: true\n\n  scope :published, -> { where(published: true) }\n  scope :recent,    -> { order(created_at: :desc).limit(10) }\n\n  before_save :normalize_title\n\n  private\n  def normalize_title\n    self.title = title.strip.capitalize\n  end\nend",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DART / FLUTTER
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "dart", "topic": "basics", "keywords": ["dart", "flutter", "widget", "async", "null safety"],
+     "snippets": [
+         "// Dart null safety\nString? nullable = null;\nString nonNull  = 'hello';\n\n// Null-aware operators\nString result = nullable ?? 'default';\nint? length  = nullable?.length;\nnullable ??= 'assigned if null';\n\n// Late initialisation\nlate String lazyValue;\nvoid init() { lazyValue = computeExpensive(); }",
+         "// Dart async/await\nimport 'dart:async';\n\nFuture<String> fetchUser(int id) async {\n  await Future.delayed(Duration(milliseconds: 100));\n  return 'User $id';\n}\n\nFuture<void> main() async {\n  final user = await fetchUser(1);\n  print(user);\n\n  final results = await Future.wait([\n    fetchUser(1), fetchUser(2), fetchUser(3)\n  ]);\n  print(results);\n}",
+         "// Flutter StatefulWidget\nimport 'package:flutter/material.dart';\n\nclass CounterPage extends StatefulWidget {\n  const CounterPage({super.key});\n  @override State<CounterPage> createState() => _CounterPageState();\n}\n\nclass _CounterPageState extends State<CounterPage> {\n  int _count = 0;\n\n  @override\n  Widget build(BuildContext context) {\n    return Scaffold(\n      appBar: AppBar(title: const Text('Counter')),\n      body: Center(child: Text('$_count', style: Theme.of(context).textTheme.displayLarge)),\n      floatingActionButton: FloatingActionButton(\n        onPressed: () => setState(() => _count++),\n        child: const Icon(Icons.add),\n      ),\n    );\n  }\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# SCALA
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "scala", "topic": "basics", "keywords": ["scala", "case class", "pattern matching", "functional"],
+     "snippets": [
+         "// Scala case class and pattern matching\ncase class User(id: Int, name: String, active: Boolean = true)\n\nval user = User(1, \"Alice\")\n\nuser match {\n  case User(_, name, true)  => println(s\"Active: $name\")\n  case User(id, name, false) => println(s\"Inactive user $id: $name\")\n}\n\n// Option\ndef findUser(id: Int): Option[User] = users.find(_.id == id)\n\nfindUser(1) match {\n  case Some(u) => println(u.name)\n  case None    => println(\"Not found\")\n}",
+         "// Collections and functional\nval nums = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)\n\nval result = nums\n  .filter(_ % 2 == 0)\n  .map(n => n * n)\n  .foldLeft(0)(_ + _)\n\n// For comprehension\nval pairs = for {\n  x <- 1 to 3\n  y <- 1 to 3\n  if x != y\n} yield (x, y)\n\n// Future\nimport scala.concurrent.Future\nimport scala.concurrent.ExecutionContext.Implicits.global\n\nval f: Future[Int] = Future { expensiveComputation() }\nf.map(_ * 2).foreach(println)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# ELIXIR
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "elixir", "topic": "basics", "keywords": ["elixir", "genserver", "process", "pipe", "pattern matching"],
+     "snippets": [
+         "# Elixir basics\n# Immutable data, pattern matching, pipe operator\n\nname = \"Alice\"\n{:ok, file} = File.read(\"data.txt\")\n\n# Pipe operator\nresult = \"hello world\"\n  |> String.upcase()\n  |> String.split()\n  |> Enum.reverse()\n  |> Enum.join(\"-\")\n# => \"WORLD-HELLO\"\n\n# Pattern matching in functions\ndefmodule Math do\n  def factorial(0), do: 1\n  def factorial(n) when n > 0, do: n * factorial(n - 1)\nend",
+         "# GenServer\ndefmodule Counter do\n  use GenServer\n\n  def start_link(init), do: GenServer.start_link(__MODULE__, init, name: __MODULE__)\n  def increment, do: GenServer.cast(__MODULE__, :increment)\n  def value,     do: GenServer.call(__MODULE__, :value)\n\n  @impl true\n  def init(count), do: {:ok, count}\n\n  @impl true\n  def handle_cast(:increment, count), do: {:noreply, count + 1}\n\n  @impl true\n  def handle_call(:value, _from, count), do: {:reply, count, count}\nend",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# HASKELL
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "haskell", "topic": "basics", "keywords": ["haskell", "pure", "monad", "type class", "lazy"],
+     "snippets": [
+         "-- Haskell basics\nmodule Main where\n\n-- Pure functions\ndouble :: Int -> Int\ndouble x = x * 2\n\nfactorial :: Integer -> Integer\nfactorial 0 = 1\nfactorial n = n * factorial (n - 1)\n\n-- List comprehension\nprimes :: [Int]\nprimes = sieve [2..]\n  where sieve (p:xs) = p : sieve [x | x <- xs, x `mod` p /= 0]\n\n-- Type classes\nclass Describable a where\n  describe :: a -> String\n\ndata Color = Red | Green | Blue\ninstance Describable Color where\n  describe Red   = \"red\"\n  describe Green = \"green\"\n  describe Blue  = \"blue\"",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# LUA
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "lua", "topic": "basics", "keywords": ["lua", "table", "metatables", "coroutine", "scripting"],
+     "snippets": [
+         "-- Lua basics\nlocal name = 'Alice'\nlocal age  = 30\nprint(string.format('Hello, %s! Age: %d', name, age))\n\n-- Tables (arrays and dicts)\nlocal arr = {10, 20, 30, 40}\nlocal map = {name='Bob', role='admin'}\n\nfor i, v in ipairs(arr) do\n  print(i, v)\nend\n\nfor k, v in pairs(map) do\n  print(k, '=', v)\nend",
+         "-- OOP with metatables\nlocal Animal = {}\nAnimal.__index = Animal\n\nfunction Animal.new(name, sound)\n  return setmetatable({name=name, sound=sound}, Animal)\nend\n\nfunction Animal:speak()\n  return self.name .. ' says ' .. self.sound\nend\n\nlocal dog = Animal.new('Rex', 'Woof')\nprint(dog:speak())",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# R (Data Science)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "r", "topic": "data_analysis", "keywords": ["r", "dataframe", "ggplot", "tidyverse", "statistics"],
+     "snippets": [
+         "# R data analysis\nlibrary(tidyverse)\n\n# Load and inspect data\ndf <- read_csv('data.csv')\nglimpse(df)\nsummary(df)\n\n# dplyr pipeline\nresult <- df %>%\n  filter(age > 25) %>%\n  select(name, age, salary) %>%\n  mutate(salary_k = salary / 1000) %>%\n  group_by(department) %>%\n  summarise(\n    count    = n(),\n    avg_sal  = mean(salary_k),\n    max_sal  = max(salary_k)\n  ) %>%\n  arrange(desc(avg_sal))",
+         "# ggplot2 visualisation\nlibrary(ggplot2)\n\nggplot(df, aes(x = age, y = salary, colour = department)) +\n  geom_point(alpha = 0.6) +\n  geom_smooth(method = 'lm') +\n  scale_colour_brewer(palette = 'Set1') +\n  labs(title = 'Salary vs Age by Department',\n       x = 'Age', y = 'Salary (USD)') +\n  theme_minimal()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# ADVANCED JAVASCRIPT
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "javascript", "topic": "web_workers", "keywords": ["web worker", "thread", "postMessage", "javascript"],
+     "snippets": [
+         "// Main thread\nconst worker = new Worker('worker.js');\nworker.postMessage({ type: 'compute', data: largeArray });\nworker.onmessage = ({ data }) => {\n  console.log('Result:', data.result);\n};\nworker.onerror = (e) => console.error(e);\n\n// worker.js\nself.onmessage = ({ data }) => {\n  if (data.type === 'compute') {\n    const result = data.data.reduce((a, b) => a + b, 0);\n    self.postMessage({ result });\n  }\n};",
+         "// Canvas 2D drawing\nconst canvas = document.getElementById('canvas');\nconst ctx    = canvas.getContext('2d');\n\n// Draw gradient rectangle\nconst grad = ctx.createLinearGradient(0, 0, canvas.width, 0);\ngrad.addColorStop(0, '#3b82f6');\ngrad.addColorStop(1, '#10b981');\nctx.fillStyle = grad;\nctx.fillRect(0, 0, canvas.width, canvas.height);\n\n// Animation loop\nfunction animate(timestamp) {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  // draw frame\n  requestAnimationFrame(animate);\n}\nrequestAnimationFrame(animate);",
+         "// Intersection Observer (lazy loading)\nconst observer = new IntersectionObserver(\n  (entries) => {\n    entries.forEach(entry => {\n      if (entry.isIntersecting) {\n        const img = entry.target;\n        img.src = img.dataset.src;\n        observer.unobserve(img);\n      }\n    });\n  },\n  { rootMargin: '200px', threshold: 0.01 }\n);\n\ndocument.querySelectorAll('img[data-src]')\n  .forEach(img => observer.observe(img));",
+         "// Web Crypto API\nconst key = await crypto.subtle.generateKey(\n  { name: 'AES-GCM', length: 256 },\n  true, ['encrypt', 'decrypt']\n);\n\nconst iv   = crypto.getRandomValues(new Uint8Array(12));\nconst data = new TextEncoder().encode('secret message');\nconst encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);\nconst decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encrypted);\nconsole.log(new TextDecoder().decode(decrypted));",
+         "// Custom events\nconst bus = new EventTarget();\n\nbus.addEventListener('user:login', (e) => {\n  console.log('Logged in:', e.detail.user);\n});\n\nbus.dispatchEvent(new CustomEvent('user:login', {\n  detail: { user: { id: 1, name: 'Alice' } }\n}));",
+     ]},
+    {"lang": "javascript", "topic": "next_js", "keywords": ["nextjs", "react", "ssr", "app router", "javascript"],
+     "snippets": [
+         "// Next.js App Router — page component\nexport default async function UsersPage() {\n  const users = await fetch('https://api.example.com/users', {\n    next: { revalidate: 60 }   // ISR: revalidate every 60s\n  }).then(r => r.json());\n\n  return (\n    <main>\n      <h1>Users</h1>\n      <ul>{users.map(u => <li key={u.id}>{u.name}</li>)}</ul>\n    </main>\n  );\n}\n\nexport const metadata = { title: 'Users' };",
+         "// Next.js API route (App Router)\n// app/api/users/route.ts\nimport { NextRequest, NextResponse } from 'next/server';\n\nexport async function GET(req: NextRequest) {\n  const { searchParams } = req.nextUrl;\n  const page  = Number(searchParams.get('page') ?? 1);\n  const users = await db.users.findMany({ skip: (page-1)*20, take: 20 });\n  return NextResponse.json(users);\n}\n\nexport async function POST(req: NextRequest) {\n  const body = await req.json();\n  const user = await db.users.create({ data: body });\n  return NextResponse.json(user, { status: 201 });\n}",
+     ]},
+    {"lang": "javascript", "topic": "svelte", "keywords": ["svelte", "reactive", "store", "component", "javascript"],
+     "snippets": [
+         "<!-- Svelte component -->\n<script>\n  import { onMount } from 'svelte';\n  import { writable } from 'svelte/store';\n\n  let name = '';\n  let users = [];\n  let loading = true;\n\n  onMount(async () => {\n    users = await fetch('/api/users').then(r => r.json());\n    loading = false;\n  });\n\n  $: greeting = name ? `Hello, ${name}!` : '';\n</script>\n\n<input bind:value={name} placeholder=\"Your name\" />\n<p>{greeting}</p>\n\n{#if loading}\n  <p>Loading...</p>\n{:else}\n  {#each users as user (user.id)}\n    <p>{user.name}</p>\n  {/each}\n{/if}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE CSS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "css", "topic": "advanced_css", "keywords": ["css", "container query", "has selector", "cascade layer", "css"],
+     "snippets": [
+         "/* Container queries */\n.card-wrapper {\n  container-type: inline-size;\n  container-name: card;\n}\n\n@container card (min-width: 400px) {\n  .card { flex-direction: row; }\n  .card img { width: 200px; }\n}\n\n/* :has() selector */\n.form:has(input:invalid) .submit-btn {\n  opacity: 0.5;\n  pointer-events: none;\n}\n\n/* Cascade layers */\n@layer base, components, utilities;\n@layer base {\n  * { box-sizing: border-box; margin: 0; }\n}\n@layer utilities {\n  .sr-only { position: absolute; width: 1px; clip: rect(0,0,0,0); }\n}",
+         "/* CSS logical properties */\n.box {\n  margin-block:  1rem;     /* top + bottom */\n  margin-inline: 2rem;     /* left + right */\n  padding-block-start: 0.5rem;\n  border-inline-end: 2px solid blue;\n  inset-inline-start: 0;   /* left in LTR */\n}\n\n/* Scroll snap */\n.carousel {\n  display: flex;\n  overflow-x: auto;\n  scroll-snap-type: x mandatory;\n  scroll-behavior: smooth;\n}\n.slide {\n  flex: 0 0 100%;\n  scroll-snap-align: start;\n}",
+         "/* CSS nesting (native) */\n.card {\n  background: white;\n  border-radius: 0.5rem;\n  padding: 1rem;\n\n  & header {\n    font-weight: bold;\n    margin-bottom: 0.5rem;\n  }\n\n  &:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }\n\n  @media (max-width: 640px) {\n    padding: 0.5rem;\n  }\n}",
+         "/* CSS Grid advanced */\n.layout {\n  display: grid;\n  grid-template-columns: [sidebar-start] 250px [sidebar-end main-start] 1fr [main-end];\n  grid-template-rows: 60px 1fr 40px;\n  min-height: 100vh;\n}\n\n/* Subgrid */\n.row {\n  display: grid;\n  grid-column: main;\n  grid-template-columns: subgrid;\n}\n\n/* Masonry layout (soon in browsers) */\n.masonry {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  grid-template-rows: masonry;\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# ADVANCED ALGORITHMS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "graph_algorithms", "keywords": ["floyd warshall", "bellman ford", "MST", "kruskal", "python"],
+     "snippets": [
+         "# Floyd-Warshall: all-pairs shortest paths O(n³)\ndef floyd_warshall(n: int, edges: list) -> list:\n    INF = float('inf')\n    dist = [[INF]*n for _ in range(n)]\n    for i in range(n): dist[i][i] = 0\n    for u, v, w in edges:\n        dist[u][v] = min(dist[u][v], w)\n    for k in range(n):\n        for i in range(n):\n            for j in range(n):\n                if dist[i][k] + dist[k][j] < dist[i][j]:\n                    dist[i][j] = dist[i][k] + dist[k][j]\n    return dist",
+         "# Bellman-Ford: shortest paths with negative weights\ndef bellman_ford(n: int, edges: list, src: int) -> list:\n    dist = [float('inf')] * n\n    dist[src] = 0\n    for _ in range(n - 1):\n        for u, v, w in edges:\n            if dist[u] + w < dist[v]:\n                dist[v] = dist[u] + w\n    # Check negative cycles\n    for u, v, w in edges:\n        if dist[u] + w < dist[v]:\n            return []  # negative cycle detected\n    return dist",
+         "# Kruskal's MST O(E log E)\ndef kruskal(n: int, edges: list) -> list:\n    edges.sort(key=lambda e: e[2])\n    parent = list(range(n))\n    def find(x):\n        while parent[x] != x:\n            parent[x] = parent[parent[x]]\n            x = parent[x]\n        return x\n    mst, cost = [], 0\n    for u, v, w in edges:\n        pu, pv = find(u), find(v)\n        if pu != pv:\n            parent[pu] = pv\n            mst.append((u, v, w))\n            cost += w\n    return mst",
+         "# Prim's MST O((V+E) log V)\nimport heapq\n\ndef prim(graph: dict, start=0) -> int:\n    visited = set()\n    heap = [(0, start)]\n    total = 0\n    while heap:\n        w, u = heapq.heappop(heap)\n        if u in visited: continue\n        visited.add(u)\n        total += w\n        for v, weight in graph.get(u, []):\n            if v not in visited:\n                heapq.heappush(heap, (weight, v))\n    return total",
+         "# Floyd's cycle detection (tortoise and hare)\ndef has_cycle(head) -> bool:\n    slow = fast = head\n    while fast and fast.next:\n        slow = slow.next\n        fast = fast.next.next\n        if slow is fast:\n            return True\n    return False\n\ndef find_cycle_start(head):\n    slow = fast = head\n    while fast and fast.next:\n        slow, fast = slow.next, fast.next.next\n        if slow is fast: break\n    else: return None\n    slow = head\n    while slow is not fast:\n        slow, fast = slow.next, fast.next\n    return slow",
+         "# Counting sort O(n+k)\ndef counting_sort(arr: list, max_val: int) -> list:\n    count = [0] * (max_val + 1)\n    for x in arr: count[x] += 1\n    result = []\n    for val, freq in enumerate(count):\n        result.extend([val] * freq)\n    return result\n\n# Radix sort O(d*n)\ndef radix_sort(arr: list) -> list:\n    for exp in [1, 10, 100, 1000]:\n        buckets = [[] for _ in range(10)]\n        for n in arr: buckets[(n // exp) % 10].append(n)\n        arr = [n for bucket in buckets for n in bucket]\n    return arr",
+         "# Knapsack 0/1 DP\ndef knapsack(weights: list, values: list, capacity: int) -> int:\n    n = len(weights)\n    dp = [[0]*(capacity+1) for _ in range(n+1)]\n    for i in range(1, n+1):\n        for w in range(capacity+1):\n            dp[i][w] = dp[i-1][w]\n            if weights[i-1] <= w:\n                dp[i][w] = max(dp[i][w],\n                               dp[i-1][w-weights[i-1]] + values[i-1])\n    return dp[n][capacity]",
+         "# Coin change DP\ndef coin_change(coins: list, amount: int) -> int:\n    dp = [float('inf')] * (amount + 1)\n    dp[0] = 0\n    for coin in coins:\n        for x in range(coin, amount + 1):\n            dp[x] = min(dp[x], dp[x - coin] + 1)\n    return dp[amount] if dp[amount] != float('inf') else -1",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE DATA STRUCTURES
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "advanced_data_structures", "keywords": ["bloom filter", "lru cache", "deque", "heap", "python"],
+     "snippets": [
+         "# LRU Cache\nfrom collections import OrderedDict\n\nclass LRUCache:\n    def __init__(self, capacity: int):\n        self._cap  = capacity\n        self._cache = OrderedDict()\n\n    def get(self, key: int) -> int:\n        if key not in self._cache: return -1\n        self._cache.move_to_end(key)\n        return self._cache[key]\n\n    def put(self, key: int, value: int) -> None:\n        if key in self._cache:\n            self._cache.move_to_end(key)\n        self._cache[key] = value\n        if len(self._cache) > self._cap:\n            self._cache.popitem(last=False)",
+         "# Bloom filter (probabilistic membership)\nimport hashlib\n\nclass BloomFilter:\n    def __init__(self, size=1000, hashes=3):\n        self._bits = [0] * size\n        self._size = size\n        self._hashes = hashes\n\n    def _positions(self, item: str):\n        for i in range(self._hashes):\n            h = int(hashlib.md5(f'{item}:{i}'.encode()).hexdigest(), 16)\n            yield h % self._size\n\n    def add(self, item: str):\n        for pos in self._positions(item):\n            self._bits[pos] = 1\n\n    def __contains__(self, item: str) -> bool:\n        return all(self._bits[p] for p in self._positions(item))",
+         "# Min/max stack O(1)\nclass MinStack:\n    def __init__(self):\n        self._stack = []\n        self._min   = []\n\n    def push(self, val: int):\n        self._stack.append(val)\n        self._min.append(min(val, self._min[-1] if self._min else val))\n\n    def pop(self):\n        self._stack.pop()\n        self._min.pop()\n\n    def top(self) -> int:  return self._stack[-1]\n    def get_min(self) -> int: return self._min[-1]",
+         "# Interval tree / merge intervals\ndef merge_intervals(intervals: list) -> list:\n    if not intervals: return []\n    intervals.sort(key=lambda x: x[0])\n    merged = [intervals[0]]\n    for start, end in intervals[1:]:\n        if start <= merged[-1][1]:\n            merged[-1][1] = max(merged[-1][1], end)\n        else:\n            merged.append([start, end])\n    return merged",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE SECURITY
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "security_advanced", "keywords": ["xss", "csrf", "sql injection", "owasp", "security"],
+     "snippets": [
+         "# SQL injection prevention\n# WRONG: f'SELECT * FROM users WHERE name = \\'{name}\\''\n# RIGHT: parameterised queries\nimport sqlite3\nconn = sqlite3.connect('db.sqlite3')\ncursor = conn.cursor()\ncursor.execute('SELECT * FROM users WHERE name = ?', (name,))\nrows = cursor.fetchall()\n\n# With SQLAlchemy ORM — safe by default\nfrom sqlalchemy import select\nstmt = select(User).where(User.name == name)  # auto-escaped",
+         "# Input validation and sanitisation\nimport html\nimport re\n\ndef sanitise_html(text: str) -> str:\n    return html.escape(text)  # XSS prevention\n\ndef validate_email(email: str) -> bool:\n    return bool(re.match(r'^[\\w.+-]+@[\\w-]+\\.[\\w.]+$', email))\n\ndef validate_username(name: str) -> bool:\n    return bool(re.match(r'^[a-zA-Z0-9_]{3,30}$', name))\n\n# CSRF token\nimport secrets\ndef generate_csrf_token() -> str:\n    return secrets.token_urlsafe(32)",
+         "# Rate limiting\nfrom collections import defaultdict\nimport time\n\nclass RateLimiter:\n    def __init__(self, max_calls: int, period: float):\n        self._max = max_calls\n        self._period = period\n        self._calls: dict = defaultdict(list)\n\n    def is_allowed(self, key: str) -> bool:\n        now = time.time()\n        calls = self._calls[key]\n        # Remove expired\n        self._calls[key] = [t for t in calls if now - t < self._period]\n        if len(self._calls[key]) >= self._max:\n            return False\n        self._calls[key].append(now)\n        return True",
+         "# HTTPS / TLS in Python\nimport ssl\nimport urllib.request\n\ncontext = ssl.create_default_context()\ncontext.verify_mode = ssl.CERT_REQUIRED\ncontext.check_hostname = True\n\n# Load custom CA\ncontext.load_verify_locations('ca-bundle.crt')\n\n# Mutual TLS\ncontext.load_cert_chain('client.crt', 'client.key')\n\nwith urllib.request.urlopen('https://example.com', context=context) as r:\n    data = r.read()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MESSAGE QUEUES / KAFKA
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "kafka", "keywords": ["kafka", "consumer", "producer", "message queue", "python"],
+     "snippets": [
+         "from confluent_kafka import Producer, Consumer\nimport json\n\n# Producer\nproducer = Producer({'bootstrap.servers': 'localhost:9092'})\n\ndef send_event(topic: str, key: str, value: dict):\n    producer.produce(\n        topic,\n        key=key.encode(),\n        value=json.dumps(value).encode(),\n        callback=lambda err, msg: (\n            print(f'Delivered: {msg.topic()}') if not err\n            else print(f'Error: {err}')\n        )\n    )\n    producer.poll(0)\n\nsend_event('user-events', 'user-1', {'type': 'signup', 'email': 'alice@example.com'})\nproducer.flush()",
+         "from confluent_kafka import Consumer\nimport json\n\nconsumer = Consumer({\n    'bootstrap.servers': 'localhost:9092',\n    'group.id':          'my-consumer-group',\n    'auto.offset.reset': 'earliest',\n})\nconsumer.subscribe(['user-events'])\n\ntry:\n    while True:\n        msg = consumer.poll(timeout=1.0)\n        if msg is None: continue\n        if msg.error(): print(f'Error: {msg.error()}'); continue\n        event = json.loads(msg.value())\n        print(f'Received: {event}')\nfinally:\n    consumer.close()",
+     ]},
+    {"lang": "python", "topic": "rabbitmq", "keywords": ["rabbitmq", "amqp", "pika", "message", "queue"],
+     "snippets": [
+         "import pika\nimport json\n\n# Publisher\nconn = pika.BlockingConnection(pika.ConnectionParameters('localhost'))\nchannel = conn.channel()\nchannel.exchange_declare(exchange='events', exchange_type='topic', durable=True)\n\ndef publish(routing_key: str, data: dict):\n    channel.basic_publish(\n        exchange='events',\n        routing_key=routing_key,\n        body=json.dumps(data),\n        properties=pika.BasicProperties(delivery_mode=2)  # persistent\n    )\n\npublish('user.signup', {'id': 1, 'email': 'alice@example.com'})\nconn.close()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# ELASTICSEARCH
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "elasticsearch", "keywords": ["elasticsearch", "search", "index", "query", "python"],
+     "snippets": [
+         "from elasticsearch import AsyncElasticsearch\n\nes = AsyncElasticsearch('http://localhost:9200')\n\nasync def index_document(index: str, id: str, doc: dict):\n    await es.index(index=index, id=id, document=doc)\n\nasync def search(index: str, query: str, size: int = 10) -> list:\n    resp = await es.search(\n        index=index,\n        query={\n            'multi_match': {\n                'query': query,\n                'fields': ['title^2', 'content', 'tags'],\n            }\n        },\n        size=size,\n        highlight={'fields': {'content': {}}}\n    )\n    return [hit['_source'] for hit in resp['hits']['hits']]",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MONGODB
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "mongodb", "keywords": ["mongodb", "motor", "document", "collection", "nosql"],
+     "snippets": [
+         "from motor.motor_asyncio import AsyncIOMotorClient\nfrom bson import ObjectId\nfrom datetime import datetime\n\nclient = AsyncIOMotorClient('mongodb://localhost:27017')\ndb     = client['myapp']\nusers  = db['users']\n\nasync def create_user(data: dict) -> str:\n    data['created_at'] = datetime.utcnow()\n    result = await users.insert_one(data)\n    return str(result.inserted_id)\n\nasync def find_users(query: dict, limit: int = 20) -> list:\n    cursor = users.find(query).sort('created_at', -1).limit(limit)\n    return [doc async for doc in cursor]\n\nasync def update_user(id: str, update: dict) -> bool:\n    result = await users.update_one(\n        {'_id': ObjectId(id)},\n        {'$set': update, '$currentDate': {'updated_at': True}}\n    )\n    return result.modified_count > 0",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DEVOPS — GITHUB ACTIONS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "yaml", "topic": "github_actions", "keywords": ["github actions", "ci cd", "workflow", "deploy", "yaml"],
+     "snippets": [
+         "# .github/workflows/ci.yml\nname: CI\non:\n  push:         { branches: [main] }\n  pull_request: { branches: [main] }\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-python@v5\n        with: { python-version: '3.12' }\n      - run: pip install -r requirements.txt\n      - run: pytest --cov=. --cov-report=xml\n      - uses: codecov/codecov-action@v4",
+         "# Deploy workflow\nname: Deploy\non:\n  push: { branches: [main] }\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    environment: production\n    steps:\n      - uses: actions/checkout@v4\n      - name: Build Docker image\n        run: docker build -t ${{ secrets.REGISTRY }}/app:${{ github.sha }} .\n      - name: Push image\n        run: |\n          echo ${{ secrets.REGISTRY_TOKEN }} | docker login -u ${{ secrets.REGISTRY_USER }} --password-stdin\n          docker push ${{ secrets.REGISTRY }}/app:${{ github.sha }}\n      - name: Deploy to server\n        uses: appleboy/ssh-action@v1\n        with:\n          host:     ${{ secrets.HOST }}\n          username: ${{ secrets.USER }}\n          key:      ${{ secrets.SSH_KEY }}\n          script:   cd /app && docker compose pull && docker compose up -d",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# TERRAFORM
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "hcl", "topic": "terraform", "keywords": ["terraform", "aws", "resource", "variable", "module"],
+     "snippets": [
+         "# Terraform AWS EC2 instance\nterraform {\n  required_providers {\n    aws = { source = \"hashicorp/aws\", version = \"~> 5.0\" }\n  }\n}\n\nprovider \"aws\" { region = var.region }\n\nvariable \"region\"        { default = \"us-east-1\" }\nvariable \"instance_type\" { default = \"t3.micro\" }\n\nresource \"aws_instance\" \"app\" {\n  ami           = data.aws_ami.ubuntu.id\n  instance_type = var.instance_type\n  key_name      = aws_key_pair.deployer.key_name\n\n  tags = { Name = \"my-app\", Env = terraform.workspace }\n}\n\noutput \"public_ip\" { value = aws_instance.app.public_ip }",
+         "# Terraform S3 + CloudFront\nresource \"aws_s3_bucket\" \"frontend\" {\n  bucket = \"my-app-frontend\"\n}\n\nresource \"aws_s3_bucket_public_access_block\" \"frontend\" {\n  bucket                  = aws_s3_bucket.frontend.id\n  block_public_acls       = true\n  block_public_policy     = true\n  ignore_public_acls      = true\n  restrict_public_buckets = true\n}\n\nresource \"aws_cloudfront_distribution\" \"cdn\" {\n  enabled             = true\n  default_root_object = \"index.html\"\n  origin {\n    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name\n    origin_id   = \"S3-frontend\"\n  }\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE PYTHON ASYNC
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "asyncio_advanced", "keywords": ["asyncio", "semaphore", "queue", "event", "python"],
+     "snippets": [
+         "import asyncio\n\n# Semaphore — limit concurrent connections\nasync def fetch(session, url, semaphore):\n    async with semaphore:\n        async with session.get(url) as r:\n            return await r.json()\n\nasync def main(urls):\n    sem = asyncio.Semaphore(10)  # max 10 concurrent\n    async with aiohttp.ClientSession() as session:\n        tasks = [fetch(session, url, sem) for url in urls]\n        return await asyncio.gather(*tasks, return_exceptions=True)",
+         "import asyncio\n\n# Async queue (producer–consumer)\nasync def producer(queue: asyncio.Queue, items: list):\n    for item in items:\n        await queue.put(item)\n        await asyncio.sleep(0.1)\n    await queue.put(None)  # sentinel\n\nasync def consumer(queue: asyncio.Queue, worker_id: int):\n    while True:\n        item = await queue.get()\n        if item is None:\n            await queue.put(None)  # pass sentinel on\n            break\n        await process(item)\n        queue.task_done()\n\nasync def main():\n    q = asyncio.Queue(maxsize=100)\n    await asyncio.gather(producer(q, data), consumer(q, 1), consumer(q, 2))",
+         "# FastAPI background tasks and WebSocket\nfrom fastapi import FastAPI, WebSocket, BackgroundTasks\n\napp = FastAPI()\n\n@app.post('/send-email')\nasync def send_email_endpoint(email: str, bg: BackgroundTasks):\n    bg.add_task(send_email, email)  # non-blocking\n    return {'status': 'queued'}\n\nclients: list[WebSocket] = []\n\n@app.websocket('/ws')\nasync def ws_endpoint(ws: WebSocket):\n    await ws.accept()\n    clients.append(ws)\n    try:\n        while True:\n            data = await ws.receive_text()\n            for c in clients:\n                await c.send_text(f'broadcast: {data}')\n    except Exception:\n        clients.remove(ws)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# ADVANCED SQL — Window functions, JSON, Full-text
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "sql", "topic": "analytics", "keywords": ["window function", "percentile", "running total", "sql"],
+     "snippets": [
+         "-- Advanced window functions\nSELECT\n  order_id,\n  amount,\n  created_at,\n  SUM(amount) OVER (ORDER BY created_at\n                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total,\n  AVG(amount) OVER (ORDER BY created_at\n                    ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS moving_avg_7,\n  NTILE(4)    OVER (ORDER BY amount DESC) AS quartile,\n  PERCENT_RANK() OVER (ORDER BY amount)   AS pct_rank\nFROM orders;",
+         "-- LATERAL JOIN (apply)\nSELECT u.name, recent.title, recent.created_at\nFROM users u\nCROSS JOIN LATERAL (\n  SELECT title, created_at\n  FROM posts\n  WHERE user_id = u.id\n  ORDER BY created_at DESC\n  LIMIT 3\n) recent;\n\n-- DISTINCT ON (PostgreSQL)\nSELECT DISTINCT ON (user_id)\n  user_id, title, created_at\nFROM posts\nORDER BY user_id, created_at DESC;",
+         "-- Pivot table with crosstab\nSELECT\n  product,\n  SUM(CASE WHEN month = 1 THEN revenue END) AS jan,\n  SUM(CASE WHEN month = 2 THEN revenue END) AS feb,\n  SUM(CASE WHEN month = 3 THEN revenue END) AS mar\nFROM sales\nGROUP BY product;\n\n-- Time-series gap fill\nWITH days AS (\n  SELECT generate_series(\n    '2024-01-01'::date,\n    '2024-12-31'::date,\n    '1 day'\n  )::date AS day\n)\nSELECT d.day, COALESCE(s.revenue, 0) AS revenue\nFROM days d\nLEFT JOIN daily_sales s ON s.day = d.day;",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE GO — Web frameworks, database
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "go", "topic": "gin_framework", "keywords": ["gin", "router", "middleware", "rest", "go"],
+     "snippets": [
+         "package main\n\nimport (\n\t\"net/http\"\n\t\"github.com/gin-gonic/gin\"\n)\n\nfunc main() {\n\tr := gin.Default()\n\tr.Use(gin.Logger(), gin.Recovery())\n\n\tapi := r.Group(\"/api\", AuthMiddleware())\n\t{\n\t\tapi.GET(\"/users\",    listUsers)\n\t\tapi.POST(\"/users\",   createUser)\n\t\tapi.GET(\"/users/:id\", getUser)\n\t}\n\tr.Run(\":8080\")\n}\n\nfunc listUsers(c *gin.Context) {\n\tpage  := c.DefaultQuery(\"page\", \"1\")\n\tusers := db.ListUsers(page)\n\tc.JSON(http.StatusOK, gin.H{\"users\": users, \"page\": page})\n}",
+         "// Go database with sqlx\nimport (\n\t\"github.com/jmoiron/sqlx\"\n\t_ \"github.com/lib/pq\"\n)\n\ntype User struct {\n\tID    int    `db:\"id\"`\n\tName  string `db:\"name\"`\n\tEmail string `db:\"email\"`\n}\n\nfunc GetUsers(db *sqlx.DB, limit int) ([]User, error) {\n\tvar users []User\n\terr := db.Select(&users,\n\t\t\"SELECT id,name,email FROM users ORDER BY id LIMIT $1\", limit)\n\treturn users, err\n}\n\nfunc CreateUser(db *sqlx.DB, u User) (int, error) {\n\tvar id int\n\terr := db.QueryRow(\n\t\t\"INSERT INTO users(name,email) VALUES($1,$2) RETURNING id\",\n\t\tu.Name, u.Email,\n\t).Scan(&id)\n\treturn id, err\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE RUST — Axum web framework
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "rust", "topic": "axum", "keywords": ["axum", "tokio", "web", "handler", "rust"],
+     "snippets": [
+         "use axum::{\n    extract::{Path, Query, State},\n    http::StatusCode,\n    response::Json,\n    routing::{get, post},\n    Router,\n};\nuse serde::{Deserialize, Serialize};\n\n#[derive(Serialize, Deserialize)]\nstruct User { id: u32, name: String }\n\nasync fn list_users(State(db): State<DB>) -> Json<Vec<User>> {\n    Json(db.get_users().await)\n}\n\nasync fn get_user(Path(id): Path<u32>, State(db): State<DB>)\n    -> Result<Json<User>, StatusCode>\n{\n    db.find_user(id).await\n        .map(Json)\n        .ok_or(StatusCode::NOT_FOUND)\n}\n\n#[tokio::main]\nasync fn main() {\n    let app = Router::new()\n        .route(\"/api/users\",     get(list_users))\n        .route(\"/api/users/:id\", get(get_user))\n        .with_state(DB::new().await);\n    axum::Server::bind(&\"0.0.0.0:8080\".parse().unwrap())\n        .serve(app.into_make_service()).await.unwrap();\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE JAVA — CompletableFuture, Optional
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "java", "topic": "modern_java", "keywords": ["completablefuture", "optional", "records", "sealed", "java"],
+     "snippets": [
+         "// Java Records (Java 16+)\npublic record User(Long id, String name, String email) {\n    // Compact constructor for validation\n    public User {\n        Objects.requireNonNull(name, \"name required\");\n        email = email.toLowerCase();\n    }\n\n    public static User of(String name, String email) {\n        return new User(null, name, email);\n    }\n}",
+         "// CompletableFuture\nCompletableFuture<User> userFuture    = fetchUserAsync(1L);\nCompletableFuture<List<Order>> orders = fetchOrdersAsync(1L);\n\nCompletableFuture.allOf(userFuture, orders)\n    .thenRun(() -> {\n        User user         = userFuture.join();\n        List<Order> ords  = orders.join();\n        sendEmail(user, ords);\n    })\n    .exceptionally(ex -> { log.error(\"Failed\", ex); return null; });\n\n// Chain\nCompletableFuture<String> result = fetchUser(id)\n    .thenApply(User::getName)\n    .thenCompose(name -> fetchProfile(name))\n    .thenApply(ProfileDTO::toJson);",
+         "// Optional\nOptional<User> userOpt = repo.findByEmail(email);\n\n// Transform\nString name = userOpt\n    .filter(User::isActive)\n    .map(User::getName)\n    .orElse(\"Anonymous\");\n\n// Throw if absent\nUser user = userOpt.orElseThrow(() -> new NotFoundException(email));\n\n// Side-effect if present\nuserOpt.ifPresent(u -> cache.put(u.getId(), u));\n\n// orElseGet (lazy)\nUser defaultUser = userOpt.orElseGet(() -> createDefault(email));",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PROMETHEUS / MONITORING
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "monitoring", "keywords": ["prometheus", "metrics", "grafana", "alerting", "python"],
+     "snippets": [
+         "from prometheus_client import Counter, Histogram, Gauge, start_http_server\nimport time\n\n# Metrics\nREQUESTS   = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint', 'status'])\nLATENCY    = Histogram('http_request_duration_seconds', 'Request latency', ['endpoint'],\n                        buckets=[.005, .01, .025, .05, .1, .25, .5, 1, 2.5])\nACTIVE_CONN = Gauge('active_connections', 'Active DB connections')\n\n# FastAPI middleware\nfrom fastapi import Request\n\nasync def metrics_middleware(request: Request, call_next):\n    start = time.time()\n    resp  = await call_next(request)\n    REQUESTS.labels(request.method, request.url.path, resp.status_code).inc()\n    LATENCY.labels(request.url.path).observe(time.time() - start)\n    return resp",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# gRPC
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "grpc", "keywords": ["grpc", "protobuf", "proto", "rpc", "python"],
+     "snippets": [
+         "# user.proto\n# syntax = \"proto3\";\n# service UserService {\n#   rpc GetUser(GetUserRequest) returns (UserResponse);\n#   rpc ListUsers(ListUsersRequest) returns (stream UserResponse);\n# }\n# message GetUserRequest  { int32 id = 1; }\n# message UserResponse    { int32 id = 1; string name = 2; string email = 3; }\n\n# gRPC server (Python)\nimport grpc\nfrom concurrent import futures\nimport user_pb2, user_pb2_grpc\n\nclass UserServicer(user_pb2_grpc.UserServiceServicer):\n    def GetUser(self, request, context):\n        user = db.get_user(request.id)\n        if not user:\n            context.set_code(grpc.StatusCode.NOT_FOUND)\n            return user_pb2.UserResponse()\n        return user_pb2.UserResponse(id=user.id, name=user.name, email=user.email)\n\nserver = grpc.server(futures.ThreadPoolExecutor(max_workers=10))\nuser_pb2_grpc.add_UserServiceServicer_to_server(UserServicer(), server)\nserver.add_insecure_port('[::]:50051')\nserver.start()\nserver.wait_for_termination()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE KOTLIN — Android, Ktor
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "kotlin", "topic": "ktor", "keywords": ["ktor", "routing", "serialization", "server", "kotlin"],
+     "snippets": [
+         "// Ktor server\nimport io.ktor.server.application.*\nimport io.ktor.server.engine.*\nimport io.ktor.server.netty.*\nimport io.ktor.server.routing.*\nimport io.ktor.server.response.*\nimport io.ktor.server.request.*\nimport io.ktor.serialization.kotlinx.json.*\n\nfun main() {\n    embeddedServer(Netty, port = 8080) {\n        install(ContentNegotiation) { json() }\n        routing {\n            get(\"/api/users\") {\n                call.respond(userService.getAll())\n            }\n            post(\"/api/users\") {\n                val user = call.receive<CreateUserRequest>()\n                val created = userService.create(user)\n                call.respond(HttpStatusCode.Created, created)\n            }\n        }\n    }.start(wait = true)\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE BASH — Advanced patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "bash", "topic": "advanced_bash", "keywords": ["heredoc", "trap", "parallel", "jq", "bash"],
+     "snippets": [
+         "#!/bin/bash\n# Heredoc\ncat <<'EOF' > config.yaml\nhost: localhost\nport: 8080\ndebug: false\nEOF\n\n# Process substitution\ndiff <(sort file1.txt) <(sort file2.txt)\n\n# Named pipes\nmkfifo /tmp/pipe\ncmd1 > /tmp/pipe &\ncmd2 < /tmp/pipe\n\n# xargs parallel execution\nfind . -name '*.log' | xargs -P4 -I{} gzip {}",
+         "#!/bin/bash\n# jq for JSON processing\ndata=$(curl -s https://api.example.com/users)\n\n# Extract fields\necho $data | jq '.[] | {id, name}'\n\n# Filter\necho $data | jq '[.[] | select(.active == true)]'\n\n# Transform\necho $data | jq 'map({(.id | tostring): .name}) | add'\n\n# Environment-based config\nexport DB_URL=$(jq -r '.database.url' config.json)\n\n# Arrays in bash\ndeclare -A config\nconfig[host]='localhost'\nconfig[port]='5432'\necho \"${config[host]}:${config[port]}\"",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE DESIGN PATTERNS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "patterns_behavioral", "keywords": ["state machine", "chain of responsibility", "mediator", "python"],
+     "snippets": [
+         "# State machine\nfrom enum import Enum, auto\nfrom typing import Callable\n\nclass State(Enum):\n    IDLE     = auto()\n    RUNNING  = auto()\n    PAUSED   = auto()\n    STOPPED  = auto()\n\nclass StateMachine:\n    _transitions = {\n        State.IDLE:    {State.RUNNING},\n        State.RUNNING: {State.PAUSED, State.STOPPED},\n        State.PAUSED:  {State.RUNNING, State.STOPPED},\n        State.STOPPED: set(),\n    }\n\n    def __init__(self): self.state = State.IDLE\n\n    def transition(self, new_state: State):\n        if new_state not in self._transitions[self.state]:\n            raise ValueError(f'Invalid: {self.state} → {new_state}')\n        self.state = new_state",
+         "# Event sourcing pattern\nfrom dataclasses import dataclass\nfrom datetime import datetime\nfrom typing import List\n\n@dataclass\nclass Event:\n    type: str\n    data: dict\n    timestamp: datetime\n\nclass Account:\n    def __init__(self):\n        self.balance = 0\n        self._events: List[Event] = []\n\n    def apply(self, event: Event):\n        if event.type == 'deposit':    self.balance += event.data['amount']\n        elif event.type == 'withdraw': self.balance -= event.data['amount']\n        self._events.append(event)\n\n    def deposit(self, amount: float):\n        self.apply(Event('deposit', {'amount': amount}, datetime.utcnow()))\n\n    def get_events(self): return list(self._events)",
+         "# Middleware pipeline (chain of responsibility)\nfrom typing import Callable, Any\n\nHandler = Callable[[dict, Callable], Any]\n\nclass Pipeline:\n    def __init__(self):\n        self._handlers: list[Handler] = []\n\n    def use(self, handler: Handler) -> 'Pipeline':\n        self._handlers.append(handler)\n        return self\n\n    def run(self, request: dict) -> Any:\n        index = 0\n        def next_handler(req):\n            nonlocal index\n            if index >= len(self._handlers):\n                return req\n            handler = self._handlers[index]\n            index += 1\n            return handler(req, next_handler)\n        return next_handler(request)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE ASSEMBLY — ARM64
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "assembly", "topic": "arm64", "keywords": ["arm64", "aarch64", "register", "instruction", "assembly"],
+     "snippets": [
+         "// ARM64 (AArch64) overview\n// Registers: x0-x30 (64-bit), w0-w30 (32-bit), xzr (zero)\n// Calling convention (AAPCS64):\n//   args:    x0-x7   (first 8 integer/pointer args)\n//   return:  x0 (x1 for 128-bit)\n//   callee-saved: x19-x28, x29 (fp), x30 (lr)\n\n// Hello World (Linux AArch64)\n.section .data\n    msg: .ascii \"Hello, ARM!\\n\"\n    len = . - msg\n.section .text\n.global _start\n_start:\n    mov x8, #64        // sys_write\n    mov x0, #1         // stdout\n    adr x1, msg        // buffer\n    mov x2, #len       // length\n    svc #0\n    mov x8, #93        // sys_exit\n    xor x0, x0, x0\n    svc #0",
+         "// ARM64 SIMD (NEON) — add two float arrays\n// x0 = dst ptr, x1 = src1 ptr, x2 = src2 ptr, x3 = count\nfloat_add:\n    cmp  x3, #4\n    b.lt .scalar\n.loop:\n    ld1  {v0.4s}, [x1], #16   // load 4 floats from src1\n    ld1  {v1.4s}, [x2], #16   // load 4 floats from src2\n    fadd v0.4s, v0.4s, v1.4s  // add element-wise\n    st1  {v0.4s}, [x0], #16   // store result\n    subs x3, x3, #4\n    b.ge .loop\n.scalar:\n    // handle remaining elements\n    ret",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# SOLID PRINCIPLES
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "solid", "keywords": ["SOLID", "SRP", "OCP", "LSP", "DIP", "python"],
+     "snippets": [
+         "# Single Responsibility Principle (SRP)\n# Bad: one class does everything\n# Good: each class has one job\n\nclass UserValidator:\n    def validate(self, data: dict) -> list[str]:\n        errors = []\n        if not data.get('email'): errors.append('Email required')\n        if len(data.get('password','')) < 8: errors.append('Password too short')\n        return errors\n\nclass UserRepository:\n    def save(self, user: dict) -> dict: ...\n    def find_by_email(self, email: str) -> dict | None: ...\n\nclass UserService:\n    def __init__(self, repo: UserRepository, validator: UserValidator):\n        self._repo = repo\n        self._validator = validator\n    def create(self, data: dict) -> dict:\n        if errs := self._validator.validate(data):\n            raise ValueError(errs)\n        return self._repo.save(data)",
+         "# Open/Closed + Dependency Inversion\nfrom abc import ABC, abstractmethod\n\nclass NotificationChannel(ABC):\n    @abstractmethod\n    def send(self, to: str, message: str) -> None: ...\n\nclass EmailChannel(NotificationChannel):\n    def send(self, to, message): print(f'Email → {to}: {message}')\n\nclass SMSChannel(NotificationChannel):\n    def send(self, to, message): print(f'SMS → {to}: {message}')\n\nclass SlackChannel(NotificationChannel):   # new channel: no change to existing code\n    def send(self, to, message): print(f'Slack → {to}: {message}')\n\nclass NotificationService:\n    def __init__(self, channel: NotificationChannel):  # inject abstraction\n        self._ch = channel\n    def notify(self, user, msg):\n        self._ch.send(user.contact, msg)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE TESTING
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "advanced_testing", "keywords": ["hypothesis", "property based", "faker", "factory boy", "testing"],
+     "snippets": [
+         "# Hypothesis — property-based testing\nfrom hypothesis import given, strategies as st\n\n@given(st.lists(st.integers()))\ndef test_sort_idempotent(nums):\n    assert sorted(sorted(nums)) == sorted(nums)\n\n@given(st.text(min_size=1))\ndef test_encode_decode(s):\n    assert s.encode('utf-8').decode('utf-8') == s\n\n@given(\n    st.integers(min_value=1, max_value=1000),\n    st.integers(min_value=1, max_value=1000)\n)\ndef test_add_commutative(a, b):\n    assert add(a, b) == add(b, a)",
+         "# pytest fixtures — database testing\nimport pytest\nfrom sqlalchemy import create_engine\nfrom sqlalchemy.orm import sessionmaker\n\n@pytest.fixture(scope='session')\ndef engine():\n    return create_engine('sqlite:///:memory:')\n\n@pytest.fixture(autouse=True)\ndef db_session(engine):\n    Base.metadata.create_all(engine)\n    Session = sessionmaker(bind=engine)\n    session = Session()\n    yield session\n    session.rollback()\n    session.close()\n    Base.metadata.drop_all(engine)\n\n@pytest.fixture\ndef user(db_session):\n    u = User(name='Alice', email='alice@test.com')\n    db_session.add(u)\n    db_session.flush()\n    return u",
+         "# Mock external services\nimport pytest\nfrom unittest.mock import AsyncMock, patch\n\n@pytest.mark.asyncio\nasync def test_send_email():\n    with patch('myapp.email.smtp_client') as mock_smtp:\n        mock_smtp.send = AsyncMock(return_value={'status': 'sent'})\n        result = await send_welcome_email('alice@example.com')\n        assert result['status'] == 'sent'\n        mock_smtp.send.assert_called_once_with(\n            to='alice@example.com',\n            subject='Welcome!',\n            body=ANY\n        )",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE PYTHON STDLIB
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "stdlib_collections", "keywords": ["collections", "deque", "namedtuple", "defaultdict", "python"],
+     "snippets": [
+         "from collections import Counter, defaultdict, deque, ChainMap, OrderedDict\n\n# Counter\nwords = 'the quick brown fox jumps over the lazy dog'.split()\nword_freq = Counter(words)\nprint(word_freq.most_common(3))\nword_freq.update(['the', 'fox'])\n\n# ChainMap — layered configs\ndefaults  = {'debug': False, 'port': 8000}\nenv_cfg   = {'port': 9000}\ncfg = ChainMap(env_cfg, defaults)\nprint(cfg['port'])   # 9000 (env overrides default)",
+         "from collections import deque\n\n# Sliding window max (monotonic deque)\ndef sliding_max(arr: list, k: int) -> list:\n    dq = deque()  # stores indices\n    result = []\n    for i, x in enumerate(arr):\n        while dq and arr[dq[-1]] <= x:\n            dq.pop()\n        dq.append(i)\n        if dq[0] <= i - k:\n            dq.popleft()\n        if i >= k - 1:\n            result.append(arr[dq[0]])\n    return result",
+     ]},
+    {"lang": "python", "topic": "stdlib_datetime", "keywords": ["datetime", "timezone", "dateutil", "arrow", "python"],
+     "snippets": [
+         "from datetime import datetime, timezone, timedelta, date\nimport zoneinfo\n\n# Timezone-aware datetime\nnow_utc    = datetime.now(timezone.utc)\nnow_moscow = datetime.now(zoneinfo.ZoneInfo('Europe/Moscow'))\n\n# Convert timezone\ndef to_local(dt: datetime, tz: str) -> datetime:\n    return dt.astimezone(zoneinfo.ZoneInfo(tz))\n\n# Arithmetic\ntomorrow    = date.today() + timedelta(days=1)\nnext_monday = date.today() + timedelta(days=7 - date.today().weekday())\ndiff        = datetime(2025, 1, 1) - datetime.now(timezone.utc).replace(tzinfo=None)\nprint(f'{diff.days} days until 2025')",
+     ]},
+    {"lang": "python", "topic": "stdlib_pathlib", "keywords": ["pathlib", "path", "glob", "walk", "python"],
+     "snippets": [
+         "from pathlib import Path\n\n# Path operations\nroot  = Path('/workspace/project')\npy_files = list(root.rglob('*.py'))\ntest_files = [f for f in py_files if f.stem.startswith('test_')]\n\nfor f in test_files:\n    print(f.relative_to(root))  # relative path\n    print(f.stat().st_size)     # file size\n\n# Read/write\nconfig = root / 'config' / 'settings.json'\nconfig.parent.mkdir(parents=True, exist_ok=True)\nconfig.write_text(json.dumps({'debug': False}), encoding='utf-8')\ndata = json.loads(config.read_text())\n\n# Temp files\nimport tempfile\nwith tempfile.NamedTemporaryFile(suffix='.json', mode='w', delete=False) as f:\n    json.dump(data, f)\n    tmp_path = Path(f.name)",
+     ]},
+    {"lang": "python", "topic": "stdlib_io", "keywords": ["io", "BytesIO", "StringIO", "stream", "python"],
+     "snippets": [
+         "import io\nimport gzip\nimport base64\n\n# In-memory bytes operations\nbuf = io.BytesIO()\nwith gzip.GzipFile(fileobj=buf, mode='wb') as gz:\n    gz.write(b'Hello World ' * 1000)\ncompressed = buf.getvalue()\nprint(f'Compressed: {len(compressed)} bytes')\n\n# Base64 encode\nb64 = base64.b64encode(compressed).decode()\n\n# Decompress\nbuf2 = io.BytesIO(compressed)\nwith gzip.GzipFile(fileobj=buf2) as gz:\n    original = gz.read()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# HTTP CACHING / REST DESIGN
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "rest_design", "keywords": ["rest", "http", "status codes", "headers", "etag"],
+     "snippets": [
+         "# HTTP status codes\n# 200 OK          — successful GET, PUT, PATCH\n# 201 Created     — successful POST\n# 204 No Content  — successful DELETE\n# 400 Bad Request — invalid input\n# 401 Unauthorized — not authenticated\n# 403 Forbidden   — authenticated but no permission\n# 404 Not Found   — resource missing\n# 409 Conflict    — duplicate / state conflict\n# 422 Unprocessable Entity — validation error\n# 429 Too Many Requests — rate limited\n# 500 Internal Server Error\n# 503 Service Unavailable\n\n# REST URL conventions\n# GET    /api/users          — list\n# POST   /api/users          — create\n# GET    /api/users/{id}     — read one\n# PUT    /api/users/{id}     — full update\n# PATCH  /api/users/{id}     — partial update\n# DELETE /api/users/{id}     — delete\n# GET    /api/users/{id}/posts — nested resource",
+         "# ETag caching in FastAPI\nfrom fastapi import Request, Response\nimport hashlib\nimport json\n\ndef etag_from(data) -> str:\n    return hashlib.md5(json.dumps(data, sort_keys=True).encode()).hexdigest()\n\n@app.get('/api/users/{id}')\nasync def get_user(id: int, request: Request, response: Response):\n    user = await db.get_user(id)\n    if not user: raise HTTPException(404)\n    tag = etag_from(user)\n    if request.headers.get('If-None-Match') == tag:\n        return Response(status_code=304)\n    response.headers['ETag'] = tag\n    response.headers['Cache-Control'] = 'private, max-age=60'\n    return user",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON TYPING ADVANCED
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "typing_advanced", "keywords": ["TypeGuard", "ParamSpec", "Concatenate", "overload", "python"],
+     "snippets": [
+         "from typing import TypeGuard, overload, Union, Literal\nfrom typing import ParamSpec, TypeVar, Callable\n\n# TypeGuard\ndef is_string_list(val: list) -> TypeGuard[list[str]]:\n    return all(isinstance(x, str) for x in val)\n\n# @overload\n@overload\ndef process(x: int)   -> str: ...\n@overload\ndef process(x: str)   -> int: ...\ndef process(x: Union[int,str]) -> Union[str,int]:\n    if isinstance(x, int): return str(x)\n    return len(x)\n\n# Literal types\nMode = Literal['read', 'write', 'append']\ndef open_file(path: str, mode: Mode) -> None: ...",
+         "from typing import ParamSpec, Callable, TypeVar\nfrom functools import wraps\nimport time\n\nP = ParamSpec('P')\nR = TypeVar('R')\n\ndef retry(times: int = 3, delay: float = 1.0):\n    def decorator(fn: Callable[P, R]) -> Callable[P, R]:\n        @wraps(fn)\n        def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:\n            for attempt in range(times):\n                try:\n                    return fn(*args, **kwargs)\n                except Exception as e:\n                    if attempt == times - 1: raise\n                    time.sleep(delay * (attempt + 1))\n        return wrapper\n    return decorator",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# OPENAPI / SWAGGER
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "yaml", "topic": "openapi", "keywords": ["openapi", "swagger", "api spec", "schema", "yaml"],
+     "snippets": [
+         "# OpenAPI 3.1 specification\nopenapi: 3.1.0\ninfo:\n  title: My API\n  version: 1.0.0\n  description: REST API\n\npaths:\n  /api/users:\n    get:\n      summary: List users\n      parameters:\n        - name: page\n          in: query\n          schema: { type: integer, default: 1 }\n      responses:\n        '200':\n          content:\n            application/json:\n              schema:\n                type: array\n                items: { $ref: '#/components/schemas/User' }\n    post:\n      requestBody:\n        required: true\n        content:\n          application/json:\n            schema: { $ref: '#/components/schemas/CreateUser' }\n\ncomponents:\n  schemas:\n    User:\n      type: object\n      properties:\n        id:    { type: integer }\n        name:  { type: string }\n        email: { type: string, format: email }\n      required: [id, name, email]",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# WEBSOCKET ADVANCED
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "websocket_server", "keywords": ["websockets", "broadcast", "room", "chat", "python"],
+     "snippets": [
+         "import asyncio\nimport json\nfrom fastapi import FastAPI, WebSocket, WebSocketDisconnect\nfrom typing import DefaultDict\nfrom collections import defaultdict\n\napp = FastAPI()\n\nclass ConnectionManager:\n    def __init__(self):\n        self._rooms: DefaultDict[str, set[WebSocket]] = defaultdict(set)\n\n    async def join(self, ws: WebSocket, room: str):\n        await ws.accept()\n        self._rooms[room].add(ws)\n\n    def leave(self, ws: WebSocket, room: str):\n        self._rooms[room].discard(ws)\n\n    async def broadcast(self, room: str, data: dict, exclude: WebSocket = None):\n        dead = set()\n        for ws in self._rooms[room]:\n            if ws is exclude: continue\n            try: await ws.send_json(data)\n            except: dead.add(ws)\n        self._rooms[room] -= dead\n\nmgr = ConnectionManager()\n\n@app.websocket('/ws/{room}')\nasync def ws(websocket: WebSocket, room: str):\n    await mgr.join(websocket, room)\n    try:\n        while True:\n            msg = await websocket.receive_json()\n            await mgr.broadcast(room, msg, exclude=websocket)\n    except WebSocketDisconnect:\n        mgr.leave(websocket, room)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON DECORATORS ADVANCED
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "decorators_advanced", "keywords": ["decorator", "class decorator", "parametrised", "stacking", "python"],
+     "snippets": [
+         "import functools\nfrom typing import Callable, TypeVar\n\nF = TypeVar('F', bound=Callable)\n\n# Decorator with optional arguments\ndef cached(fn=None, *, maxsize=128):\n    if fn is None:\n        return lambda f: cached(f, maxsize=maxsize)\n    memo = {}\n    @functools.wraps(fn)\n    def wrapper(*args):\n        if args not in memo:\n            if len(memo) >= maxsize:\n                memo.pop(next(iter(memo)))\n            memo[args] = fn(*args)\n        return memo[args]\n    wrapper.cache_clear = memo.clear\n    return wrapper\n\n@cached\ndef fib(n): return n if n < 2 else fib(n-1)+fib(n-2)\n\n@cached(maxsize=256)\ndef heavy(x, y): ...",
+         "# Class-based decorator\nclass Retry:\n    def __init__(self, times=3, exceptions=(Exception,)):\n        self.times = times\n        self.exceptions = exceptions\n\n    def __call__(self, fn):\n        @functools.wraps(fn)\n        def wrapper(*args, **kwargs):\n            for i in range(self.times):\n                try: return fn(*args, **kwargs)\n                except self.exceptions:\n                    if i == self.times - 1: raise\n        return wrapper\n\n@Retry(times=5, exceptions=(ConnectionError, TimeoutError))\ndef call_api(): ...",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MORE LINUX / SYSADMIN
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "bash", "topic": "systemd", "keywords": ["systemd", "service", "unit", "journald", "linux"],
+     "snippets": [
+         "# systemd service unit file\n# /etc/systemd/system/myapp.service\n[Unit]\nDescription=My Python Application\nAfter=network.target postgresql.service\nRequires=postgresql.service\n\n[Service]\nType=exec\nUser=appuser\nWorkingDirectory=/opt/myapp\nExecStart=/opt/myapp/.venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000\nRestart=on-failure\nRestartSec=5\nEnvironmentFile=/opt/myapp/.env\n\n# Security hardening\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nReadWritePaths=/opt/myapp/data\n\n[Install]\nWantedBy=multi-user.target\n\n# Commands:\n# systemctl daemon-reload\n# systemctl enable --now myapp\n# journalctl -u myapp -f",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# ZERO-DOWNTIME DEPLOYMENT PATTERNS
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "yaml", "topic": "deployment_patterns", "keywords": ["blue green", "canary", "rolling update", "deployment", "kubernetes"],
+     "snippets": [
+         "# Kubernetes Rolling Update (zero downtime)\napiVersion: apps/v1\nkind: Deployment\nmetadata: { name: api }\nspec:\n  replicas: 3\n  strategy:\n    type: RollingUpdate\n    rollingUpdate:\n      maxUnavailable: 0    # never have less than 3 pods\n      maxSurge: 1          # allow 4 pods during update\n  template:\n    spec:\n      containers:\n        - name: api\n          image: myapp:v2\n          readinessProbe:\n            httpGet: { path: /health, port: 8000 }\n            initialDelaySeconds: 10\n            periodSeconds: 5\n          lifecycle:\n            preStop:\n              exec:\n                command: [\"sleep\", \"10\"]  # drain connections",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# GENERATE CELLS
+# ---------------------------------------------------------------------------
+
+if __name__ == '__main__':
     main()
