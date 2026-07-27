@@ -1732,5 +1732,358 @@ KNOWLEDGE += [
 ]
 
 
+# ===========================================================================
+# WAVE 4 — ~250 more unique cells
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# PYTHON — advanced OOP / meta
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "metaclasses", "keywords": ["metaclass", "__new__", "__init_subclass__", "type", "python"],
+     "snippets": [
+         "# Metaclass — control class creation\nclass SingletonMeta(type):\n    _instances = {}\n    def __call__(cls, *args, **kwargs):\n        if cls not in cls._instances:\n            cls._instances[cls] = super().__call__(*args, **kwargs)\n        return cls._instances[cls]\n\nclass Config(metaclass=SingletonMeta):\n    def __init__(self):\n        self.debug = False\n        self.port  = 8000\n\na = Config()\nb = Config()\nassert a is b  # same object",
+         "# __init_subclass__ — hook on subclass creation\nclass Plugin:\n    _registry: dict = {}\n\n    def __init_subclass__(cls, name: str = '', **kwargs):\n        super().__init_subclass__(**kwargs)\n        if name:\n            Plugin._registry[name] = cls\n\nclass EmailPlugin(Plugin, name='email'):\n    def send(self, msg): print(f'Email: {msg}')\n\nclass SMSPlugin(Plugin, name='sms'):\n    def send(self, msg): print(f'SMS: {msg}')\n\nplugin = Plugin._registry['email']()\nplugin.send('Hello')  # Email: Hello",
+         "# __class_getitem__ — support generic syntax\nclass TypedList:\n    def __class_getitem__(cls, item_type):\n        class _TypedList(cls):\n            _type = item_type\n            def append(self, v):\n                if not isinstance(v, self._type):\n                    raise TypeError(f'Expected {self._type}')\n                super().append(v)\n        return _TypedList\n\nIntList = TypedList[int]\nils = IntList()\nils.append(42)   # OK\nils.append('x')  # TypeError",
+     ]},
+    {"lang": "python", "topic": "context_vars", "keywords": ["contextvars", "ContextVar", "async context", "thread local", "python"],
+     "snippets": [
+         "from contextvars import ContextVar, copy_context\nimport asyncio\n\n# Per-coroutine context (like thread-local but for async)\nrequest_id: ContextVar[str] = ContextVar('request_id', default='unknown')\ncurrent_user: ContextVar[dict] = ContextVar('current_user')\n\nasync def handle_request(rid: str):\n    token = request_id.set(rid)\n    try:\n        await process()  # can read request_id anywhere\n    finally:\n        request_id.reset(token)\n\nasync def process():\n    rid = request_id.get()\n    print(f'Processing request {rid}')",
+     ]},
+    {"lang": "python", "topic": "operator_overloading", "keywords": ["dunder", "__add__", "__eq__", "__repr__", "operator", "python"],
+     "snippets": [
+         "from __future__ import annotations\nfrom dataclasses import dataclass\nfrom typing import Iterator\n\n@dataclass\nclass Vector:\n    x: float\n    y: float\n\n    def __add__(self, other: Vector) -> Vector:\n        return Vector(self.x + other.x, self.y + other.y)\n    def __sub__(self, other: Vector) -> Vector:\n        return Vector(self.x - other.x, self.y - other.y)\n    def __mul__(self, scalar: float) -> Vector:\n        return Vector(self.x * scalar, self.y * scalar)\n    def __abs__(self) -> float:\n        return (self.x**2 + self.y**2) ** 0.5\n    def __iter__(self) -> Iterator[float]:\n        yield self.x; yield self.y\n    def __repr__(self) -> str:\n        return f'Vector({self.x}, {self.y})'",
+         "class Matrix:\n    def __init__(self, rows):\n        self._rows = rows\n\n    def __getitem__(self, idx):\n        if isinstance(idx, tuple):\n            r, c = idx\n            return self._rows[r][c]\n        return self._rows[idx]\n\n    def __setitem__(self, idx, val):\n        if isinstance(idx, tuple):\n            r, c = idx\n            self._rows[r][c] = val\n        else:\n            self._rows[idx] = val\n\n    def __matmul__(self, other):\n        n = len(self._rows)\n        return Matrix([[sum(self[i,k]*other[k,j] for k in range(n))\n                        for j in range(n)] for i in range(n)])\n\n    def __repr__(self):\n        return '\\n'.join(' '.join(f'{v:6.2f}' for v in row) for row in self._rows)",
+     ]},
+    {"lang": "python", "topic": "memory_management", "keywords": ["gc", "weakref", "__del__", "memory profiler", "python"],
+     "snippets": [
+         "import gc\nimport sys\nimport tracemalloc\n\n# Object size\ndata = list(range(1000))\nprint(sys.getsizeof(data))  # shallow size\n\n# Deep size\ndef deep_size(obj, seen=None):\n    if seen is None: seen = set()\n    obj_id = id(obj)\n    if obj_id in seen: return 0\n    seen.add(obj_id)\n    size = sys.getsizeof(obj)\n    if hasattr(obj, '__dict__'):\n        size += deep_size(obj.__dict__, seen)\n    if hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):\n        size += sum(deep_size(i, seen) for i in obj)\n    return size\n\n# tracemalloc\ntracemalloc.start()\n# ... code to profile ...\nsnap = tracemalloc.take_snapshot()\nfor stat in snap.statistics('lineno')[:5]:\n    print(stat)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — functional programming
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "functional", "keywords": ["functional", "immutable", "pipe", "compose", "curry", "python"],
+     "snippets": [
+         "from functools import reduce\nfrom typing import Callable, TypeVar\n\nT = TypeVar('T')\n\n# Function composition\ndef compose(*fns):\n    return reduce(lambda f, g: lambda x: f(g(x)), fns)\n\n# Pipe (left-to-right composition)\ndef pipe(*fns):\n    return reduce(lambda f, g: lambda x: g(f(x)), fns)\n\n# Usage\nprocess = pipe(\n    str.strip,\n    str.lower,\n    lambda s: s.replace(' ', '_'),\n)\nresult = process('  Hello World  ')  # 'hello_world'",
+         "# Partial application and currying\nfrom functools import partial\n\ndef curry(fn):\n    import inspect\n    arity = len(inspect.signature(fn).parameters)\n    def curried(*args):\n        if len(args) >= arity: return fn(*args)\n        return lambda *more: curried(*(args + more))\n    return curried\n\n@curry\ndef add(a, b, c): return a + b + c\n\nadd5 = add(5)\nadd5_3 = add5(3)\nprint(add5_3(2))  # 10\n\n# Monad-like: Maybe\nclass Maybe:\n    def __init__(self, val): self._val = val\n    def bind(self, fn): return Maybe(fn(self._val)) if self._val is not None else self\n    def get_or(self, default): return self._val if self._val is not None else default",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — performance
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "performance", "keywords": ["cython", "numba", "jit", "profile", "optimization", "python"],
+     "snippets": [
+         "# Numba JIT compilation\nfrom numba import jit, prange\nimport numpy as np\n\n@jit(nopython=True, parallel=True)\ndef matrix_multiply(A, B):\n    n = A.shape[0]\n    C = np.zeros((n, n))\n    for i in prange(n):\n        for j in range(n):\n            for k in range(n):\n                C[i, j] += A[i, k] * B[k, j]\n    return C\n\nA = np.random.rand(500, 500)\nB = np.random.rand(500, 500)\nC = matrix_multiply(A, B)  # first call compiles, then fast",
+         "# cProfile + line_profiler\nimport cProfile, pstats, io\n\ndef profile(fn):\n    pr = cProfile.Profile()\n    pr.enable()\n    result = fn()\n    pr.disable()\n    s = io.StringIO()\n    pstats.Stats(pr, stream=s).sort_stats('cumulative').print_stats(10)\n    print(s.getvalue())\n    return result\n\n# Memory profiler (pip install memory-profiler)\nfrom memory_profiler import profile as mprofile\n\n@mprofile\ndef memory_intensive():\n    data = [i**2 for i in range(1_000_000)]\n    return sum(data)",
+         "# Slots and __slots__ for memory optimization\nimport sys\n\nclass WithDict:\n    def __init__(self, x, y): self.x = x; self.y = y\n\nclass WithSlots:\n    __slots__ = ('x', 'y')\n    def __init__(self, x, y): self.x = x; self.y = y\n\nno_slots = [WithDict(i, i) for i in range(100_000)]\nwith_slots = [WithSlots(i, i) for i in range(100_000)]\nprint(f'Without slots: {sys.getsizeof(no_slots[0])} bytes')  # ~48\nprint(f'With slots: {sys.getsizeof(with_slots[0])} bytes')   # ~56 (no __dict__)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# JAVASCRIPT — more advanced
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "javascript", "topic": "performance", "keywords": ["performance", "lazy loading", "virtual scroll", "web vitals", "javascript"],
+     "snippets": [
+         "// Virtual scrolling (render only visible rows)\nconst ROW_HEIGHT = 50;\nconst VISIBLE_COUNT = 20;\n\nfunction VirtualList({ items }) {\n  const [scrollTop, setScrollTop] = React.useState(0);\n  const startIdx = Math.floor(scrollTop / ROW_HEIGHT);\n  const endIdx   = Math.min(startIdx + VISIBLE_COUNT, items.length);\n  const visibleItems = items.slice(startIdx, endIdx);\n  const totalHeight  = items.length * ROW_HEIGHT;\n  const offsetY      = startIdx * ROW_HEIGHT;\n\n  return (\n    <div style={{height: 400, overflow: 'auto'}}\n         onScroll={e => setScrollTop(e.target.scrollTop)}>\n      <div style={{height: totalHeight, position: 'relative'}}>\n        <div style={{transform: `translateY(${offsetY}px)`}}>\n          {visibleItems.map((item, i) => (\n            <div key={startIdx + i} style={{height: ROW_HEIGHT}}>{item}</div>\n          ))}\n        </div>\n      </div>\n    </div>\n  );\n}",
+         "// Web Workers with Comlink\nimport * as Comlink from 'comlink';\n\n// worker.js\nconst api = {\n  async heavyCompute(data) {\n    return data.map(x => x ** 2).reduce((a, b) => a + b, 0);\n  }\n};\nComlink.expose(api);\n\n// main.js\nconst worker = new Worker(new URL('./worker.js', import.meta.url));\nconst api = Comlink.wrap(worker);\nconst result = await api.heavyCompute([1, 2, 3, 4, 5]);",
+         "// Streaming with ReadableStream\nconst stream = new ReadableStream({\n  async start(controller) {\n    const data = await fetchLargeDataset();\n    for (const chunk of data) {\n      controller.enqueue(new TextEncoder().encode(JSON.stringify(chunk) + '\\n'));\n    }\n    controller.close();\n  }\n});\n\nconst response = new Response(stream, {\n  headers: { 'Content-Type': 'application/ndjson' }\n});\n\n// Consume stream\nconst reader = response.body.getReader();\nwhile (true) {\n  const { done, value } = await reader.read();\n  if (done) break;\n  process(new TextDecoder().decode(value));\n}",
+     ]},
+    {"lang": "javascript", "topic": "indexeddb", "keywords": ["indexeddb", "offline", "browser storage", "idb", "javascript"],
+     "snippets": [
+         "// IndexedDB with idb library\nimport { openDB } from 'idb';\n\nconst db = await openDB('my-app', 1, {\n  upgrade(db) {\n    const store = db.createObjectStore('users', { keyPath: 'id', autoIncrement: true });\n    store.createIndex('email', 'email', { unique: true });\n  }\n});\n\n// CRUD\nawait db.put('users', { name: 'Alice', email: 'alice@example.com' });\nconst alice = await db.getFromIndex('users', 'email', 'alice@example.com');\nconst all   = await db.getAll('users');\nawait db.delete('users', alice.id);\n\n// Transaction\nconst tx = db.transaction('users', 'readwrite');\nawait tx.store.put({ name: 'Bob', email: 'bob@example.com' });\nawait tx.done;",
+     ]},
+    {"lang": "javascript", "topic": "pwa_features", "keywords": ["push notification", "background sync", "pwa", "manifest", "javascript"],
+     "snippets": [
+         "// Push Notifications\nasync function subscribePush() {\n  const registration = await navigator.serviceWorker.ready;\n  const subscription = await registration.pushManager.subscribe({\n    userVisibleOnly: true,\n    applicationServerKey: urlB64ToUint8Array(PUBLIC_KEY)\n  });\n  await fetch('/api/push/subscribe', {\n    method: 'POST',\n    body: JSON.stringify(subscription),\n    headers: { 'Content-Type': 'application/json' }\n  });\n}\n\n// Service worker: handle push\nself.addEventListener('push', event => {\n  const data = event.data?.json();\n  event.waitUntil(\n    self.registration.showNotification(data.title, {\n      body: data.body,\n      icon: '/icon.png',\n      badge: '/badge.png',\n      data: { url: data.url }\n    })\n  );\n});",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# TYPESCRIPT — advanced
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "typescript", "topic": "type_system", "keywords": ["recursive type", "variadic tuple", "template string", "typescript"],
+     "snippets": [
+         "// Recursive types\ntype JSONValue =\n  | string | number | boolean | null\n  | JSONValue[]\n  | { [key: string]: JSONValue };\n\ntype DeepPartial<T> = T extends object\n  ? { [K in keyof T]?: DeepPartial<T[K]> }\n  : T;\n\ntype Path<T, K extends keyof T = keyof T> =\n  K extends string\n    ? T[K] extends object\n      ? `${K}.${Path<T[K]>}` | K\n      : K\n    : never;\n\n// Path type for nested access\ntype UserPath = Path<{ name: string; address: { city: string } }>;\n// 'name' | 'address' | 'address.city'",
+         "// Builder pattern with method chaining types\ntype Builder<T> = {\n  [K in keyof T as `set${Capitalize<string & K>}`]: (v: T[K]) => Builder<T>;\n} & { build(): T };\n\nfunction createBuilder<T>(defaults: Partial<T> = {}): Builder<T> {\n  const obj: Partial<T> = { ...defaults };\n  return new Proxy({} as Builder<T>, {\n    get(_, prop: string) {\n      if (prop === 'build') return () => obj;\n      const key = prop.replace(/^set/, '').toLowerCase() as keyof T;\n      return (v: T[typeof key]) => { obj[key] = v; return proxy; };\n    }\n  }) as Builder<T>;\n}",
+         "// Branded types for type-safe IDs\ntype Brand<T, B> = T & { readonly _brand: B };\ntype UserId   = Brand<number, 'UserId'>;\ntype OrderId  = Brand<number, 'OrderId'>;\n\nfunction makeUserId(id: number): UserId   { return id as UserId; }\nfunction makeOrderId(id: number): OrderId { return id as OrderId; }\n\nasync function getUser(id: UserId)  { /* ... */ }\nasync function getOrder(id: OrderId) { /* ... */ }\n\nconst userId  = makeUserId(1);\nconst orderId = makeOrderId(1);\ngetUser(userId);    // OK\ngetUser(orderId);   // TypeScript error: OrderId is not UserId",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# SQL — NoSQL patterns, migrations
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "sql", "topic": "migrations", "keywords": ["flyway", "liquibase", "migration", "versioning", "sql"],
+     "snippets": [
+         "-- Flyway migration: V2__add_user_roles.sql\nALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'user';\n\nCREATE TABLE roles (\n  id          SERIAL PRIMARY KEY,\n  name        VARCHAR(50) UNIQUE NOT NULL,\n  permissions JSONB DEFAULT '{}'\n);\n\nCREATE TABLE user_roles (\n  user_id INT REFERENCES users(id) ON DELETE CASCADE,\n  role_id INT REFERENCES roles(id) ON DELETE CASCADE,\n  PRIMARY KEY (user_id, role_id)\n);\n\n-- Seed data\nINSERT INTO roles (name, permissions)\nVALUES\n  ('admin',  '{\"read\": true, \"write\": true, \"delete\": true}'),\n  ('editor', '{\"read\": true, \"write\": true}'),\n  ('viewer', '{\"read\": true}');",
+         "-- Soft delete pattern\nALTER TABLE users ADD COLUMN deleted_at TIMESTAMPTZ;\n\n-- View that hides soft-deleted rows\nCREATE VIEW active_users AS\n  SELECT * FROM users WHERE deleted_at IS NULL;\n\n-- Trigger to set deleted_at instead of deleting\nCREATE OR REPLACE RULE users_soft_delete AS\n  ON DELETE TO users DO INSTEAD\n  UPDATE users SET deleted_at = NOW() WHERE id = OLD.id;\n\n-- Query including deleted\nSELECT * FROM users WHERE id = 1;        -- may include deleted\nSELECT * FROM active_users WHERE id = 1;  -- excludes deleted",
+         "-- Row-level security (PostgreSQL RLS)\nALTER TABLE documents ENABLE ROW LEVEL SECURITY;\n\nCREATE POLICY doc_owner_policy ON documents\n  USING (owner_id = current_setting('app.current_user_id')::int);\n\nCREATE POLICY doc_read_policy ON documents FOR SELECT\n  USING (\n    owner_id = current_setting('app.current_user_id')::int\n    OR is_public = true\n  );\n\n-- Set context before querying\nSET app.current_user_id = '42';\nSELECT * FROM documents;  -- only sees own + public docs",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# GO — channels, patterns, testing
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "go", "topic": "advanced", "keywords": ["select", "timeout", "pipeline", "fan out", "go"],
+     "snippets": [
+         "// Select with timeout and default\nfunc fetchWithTimeout(url string) (string, error) {\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\n\tch := make(chan string, 1)\n\tgo func() {\n\t\tbody, _ := fetch(url)\n\t\tch <- body\n\t}()\n\n\tselect {\n\tcase result := <-ch:\n\t\treturn result, nil\n\tcase <-ctx.Done():\n\t\treturn \"\", fmt.Errorf(\"timeout: %w\", ctx.Err())\n\t}\n}",
+         "// Fan-out / fan-in pipeline\nfunc fanOut[T any](input <-chan T, n int) []<-chan T {\n\touts := make([]<-chan T, n)\n\tfor i := range outs {\n\t\tch := make(chan T)\n\t\touts[i] = ch\n\t\tgo func() {\n\t\t\tfor v := range input { ch <- v }\n\t\t\tclose(ch)\n\t\t}()\n\t}\n\treturn outs\n}\n\nfunc merge[T any](inputs ...<-chan T) <-chan T {\n\tout := make(chan T)\n\tvar wg sync.WaitGroup\n\tfor _, in := range inputs {\n\t\twg.Add(1)\n\t\tgo func(ch <-chan T) {\n\t\t\tdefer wg.Done()\n\t\t\tfor v := range ch { out <- v }\n\t\t}(in)\n\t}\n\tgo func() { wg.Wait(); close(out) }()\n\treturn out\n}",
+         "// Go table-driven tests with subtests\nfunc TestHTTPHandler(t *testing.T) {\n\ttests := []struct {\n\t\tname   string\n\t\tmethod string\n\t\tpath   string\n\t\tbody   string\n\t\twantStatus int\n\t\twantBody   string\n\t}{\n\t\t{\"GET users\", \"GET\", \"/api/users\", \"\", 200, `[`},\n\t\t{\"POST user\", \"POST\", \"/api/users\", `{\"name\":\"Alice\"}`, 201, `\"Alice\"`},\n\t\t{\"invalid path\", \"GET\", \"/invalid\", \"\", 404, ``},\n\t}\n\tfor _, tc := range tests {\n\t\tt.Run(tc.name, func(t *testing.T) {\n\t\t\trr := httptest.NewRecorder()\n\t\t\treq := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))\n\t\t\thandler.ServeHTTP(rr, req)\n\t\t\tassert.Equal(t, tc.wantStatus, rr.Code)\n\t\t\tassert.Contains(t, rr.Body.String(), tc.wantBody)\n\t\t})\n\t}\n}",
+     ]},
+    {"lang": "go", "topic": "grpc_go", "keywords": ["grpc", "protobuf", "streaming", "interceptor", "go"],
+     "snippets": [
+         "// gRPC server with interceptor\nimport (\n\t\"google.golang.org/grpc\"\n\t\"google.golang.org/grpc/codes\"\n\t\"google.golang.org/grpc/status\"\n)\n\nfunc authInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {\n\tmd, ok := metadata.FromIncomingContext(ctx)\n\tif !ok { return nil, status.Error(codes.Unauthenticated, \"no metadata\") }\n\ttokens := md.Get(\"authorization\")\n\tif len(tokens) == 0 || !validateToken(tokens[0]) {\n\t\treturn nil, status.Error(codes.Unauthenticated, \"invalid token\")\n\t}\n\treturn handler(ctx, req)\n}\n\nserver := grpc.NewServer(grpc.UnaryInterceptor(authInterceptor))\npb.RegisterUserServiceServer(server, &UserServer{})\nserver.Serve(lis)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# RUST — advanced topics
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "rust", "topic": "advanced_rust", "keywords": ["unsafe", "ffi", "pin", "future", "rust"],
+     "snippets": [
+         "// Unsafe Rust — raw pointers\nunsafe fn raw_pointer_example() {\n    let x = 42i32;\n    let raw = &x as *const i32;\n    let val = *raw;  // dereference raw pointer\n    println!(\"{}\", val);\n\n    // Mutable raw pointer\n    let mut y = 0i32;\n    let raw_mut = &mut y as *mut i32;\n    *raw_mut = 100;\n}\n\n// FFI — call C from Rust\nextern \"C\" {\n    fn strlen(s: *const std::os::raw::c_char) -> usize;\n    fn printf(fmt: *const std::os::raw::c_char, ...) -> i32;\n}\n\nunsafe {\n    let s = std::ffi::CString::new(\"hello\").unwrap();\n    let len = strlen(s.as_ptr());\n    println!(\"Length: {}\", len);\n}",
+         "// Custom async executor (simplified)\nuse std::future::Future;\nuse std::pin::Pin;\nuse std::task::{Context, Poll, Waker, RawWaker, RawWakerVTable};\n\nstruct Block<F: Future> { future: Pin<Box<F>> }\n\nfn block_on<F: Future>(fut: F) -> F::Output {\n    let mut fut = Box::pin(fut);\n    let waker = noop_waker();\n    let mut cx = Context::from_waker(&waker);\n    loop {\n        match fut.as_mut().poll(&mut cx) {\n            Poll::Ready(v) => return v,\n            Poll::Pending  => std::thread::sleep(std::time::Duration::from_millis(1)),\n        }\n    }\n}",
+         "// Rust proc macros (derive)\nuse proc_macro::TokenStream;\nuse quote::quote;\nuse syn;\n\n#[proc_macro_derive(HelloMacro)]\npub fn hello_macro_derive(input: TokenStream) -> TokenStream {\n    let ast: syn::DeriveInput = syn::parse(input).unwrap();\n    let name = &ast.ident;\n    let gen = quote! {\n        impl HelloMacro for #name {\n            fn hello_macro() {\n                println!(\"Hello from {}!\", stringify!(#name));\n            }\n        }\n    };\n    gen.into()\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# C / C++ — advanced
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "c", "topic": "advanced_c", "keywords": ["function pointer", "callback", "signal", "setjmp", "c"],
+     "snippets": [
+         "#include <stdio.h>\n#include <stdlib.h>\n\n// Function pointers\ntypedef int (*compare_fn)(const void*, const void*);\n\nint compare_ints(const void* a, const void* b) {\n    return (*(int*)a) - (*(int*)b);\n}\n\nvoid sort_array(int* arr, size_t n) {\n    qsort(arr, n, sizeof(int), compare_ints);\n}\n\n// Callback table (dispatch table)\ntypedef struct {\n    const char* name;\n    void (*handler)(int);\n} Command;\n\nvoid cmd_quit(int v)   { exit(v); }\nvoid cmd_print(int v)  { printf(\"%d\\n\", v); }\n\nCommand commands[] = {\n    {\"quit\",  cmd_quit},\n    {\"print\", cmd_print},\n};",
+         "#include <signal.h>\n#include <setjmp.h>\n#include <stdio.h>\n\n// Signal handling\nvolatile sig_atomic_t running = 1;\n\nvoid sigint_handler(int sig) {\n    running = 0;\n    printf(\"\\nCaught SIGINT, shutting down...\\n\");\n}\n\nint main(void) {\n    signal(SIGINT, sigint_handler);\n    signal(SIGTERM, sigint_handler);\n    while (running) { /* main loop */ }\n    return 0;\n}\n\n// setjmp / longjmp (non-local jump)\n#include <setjmp.h>\njmp_buf env;\nif (!setjmp(env)) { /* try block equivalent */ }\nelse { /* catch block equivalent */ }",
+     ]},
+    {"lang": "cpp", "topic": "advanced_cpp", "keywords": ["CRTP", "SFINAE", "concepts", "policy", "cpp"],
+     "snippets": [
+         "// CRTP (Curiously Recurring Template Pattern)\ntemplate<typename Derived>\nclass Printable {\npublic:\n    void print() const {\n        const Derived& d = static_cast<const Derived&>(*this);\n        d.to_stream(std::cout);\n        std::cout << '\\n';\n    }\n};\n\nclass Point : public Printable<Point> {\n    double x, y;\npublic:\n    Point(double x, double y) : x(x), y(y) {}\n    void to_stream(std::ostream& os) const { os << '(' << x << ',' << y << ')'; }\n};",
+         "// Move semantics\nclass Buffer {\n    size_t size_;\n    std::unique_ptr<char[]> data_;\npublic:\n    Buffer(size_t n) : size_(n), data_(std::make_unique<char[]>(n)) {}\n\n    // Move constructor\n    Buffer(Buffer&&) = default;\n    Buffer& operator=(Buffer&&) = default;\n\n    // Disable copy\n    Buffer(const Buffer&) = delete;\n    Buffer& operator=(const Buffer&) = delete;\n\n    char* data()  { return data_.get(); }\n    size_t size() { return size_; }\n};",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# JAVA — more modern features
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "java", "topic": "virtual_threads", "keywords": ["virtual threads", "project loom", "java 21", "reactive", "java"],
+     "snippets": [
+         "// Java 21 Virtual Threads (Project Loom)\nimport java.util.concurrent.Executors;\n\n// Old way — platform thread pool\ntry (var executor = Executors.newFixedThreadPool(200)) {\n    for (int i = 0; i < 10_000; i++) {\n        executor.submit(() -> handleRequest());\n    }\n}\n\n// New way — virtual threads (lightweight, millions possible)\ntry (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n    for (int i = 0; i < 1_000_000; i++) {\n        executor.submit(() -> handleRequest());\n    }\n}\n\n// Named virtual thread\nThread.ofVirtual()\n    .name(\"my-virtual-\", 0)\n    .start(() -> processTask());",
+         "// Java Sealed Classes + Pattern Matching\npublic sealed interface Shape permits Circle, Rectangle, Triangle {}\n\npublic record Circle(double radius) implements Shape {}\npublic record Rectangle(double w, double h) implements Shape {}\npublic record Triangle(double a, double b, double c) implements Shape {}\n\ndouble area(Shape s) {\n    return switch (s) {\n        case Circle c      -> Math.PI * c.radius() * c.radius();\n        case Rectangle r   -> r.w() * r.h();\n        case Triangle t    -> {\n            double p = (t.a()+t.b()+t.c())/2;\n            yield Math.sqrt(p*(p-t.a())*(p-t.b())*(p-t.c()));\n        }\n    };\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# KOTLIN — advanced
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "kotlin", "topic": "dsl", "keywords": ["DSL", "type-safe builder", "lambda receiver", "kotlin"],
+     "snippets": [
+         "// Type-safe builder DSL\ndata class Html(val children: MutableList<Tag> = mutableListOf())\ndata class Tag(val name: String, val content: String)\n\nclass HtmlBuilder {\n    private val html = Html()\n\n    fun h1(text: String)  { html.children += Tag(\"h1\",  text) }\n    fun p(text: String)   { html.children += Tag(\"p\",   text) }\n    fun code(text: String){ html.children += Tag(\"code\",text) }\n\n    fun build() = html\n}\n\nfun html(init: HtmlBuilder.() -> Unit): Html =\n    HtmlBuilder().apply(init).build()\n\nval page = html {\n    h1(\"Hello, Kotlin DSL!\")\n    p(\"This is built with a type-safe builder.\")\n    code(\"println(\\\"Hello\\\")\")\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# CLOJURE / LISP
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "clojure", "topic": "basics", "keywords": ["clojure", "lisp", "immutable", "functional", "jvm"],
+     "snippets": [
+         ";; Clojure basics\n(ns myapp.core)\n\n;; Immutable data structures\n(def user {:name \"Alice\" :age 30 :active true})\n(def updated (assoc user :age 31 :city \"Moscow\"))\n;; user unchanged, updated is a new map\n\n;; Sequences and lazy evaluation\n(def naturals (iterate inc 1))\n(take 10 (filter even? naturals))  ; (2 4 6 8 10 12 14 16 18 20)\n\n;; Threading macros\n(->> (range 100)\n     (filter odd?)\n     (map #(* % %))\n     (take 5)\n     (reduce +))\n;; => 1+9+25+49+81 = 165",
+         ";; Clojure macros\n(defmacro when-let\n  [[binding test] & body]\n  `(let [~binding ~test]\n     (when ~binding ~@body)))\n\n;; Atoms (mutable state)\n(def counter (atom 0))\n(swap! counter inc)\n(reset! counter 0)\n@counter  ; deref\n\n;; Channels (core.async)\n(require '[clojure.core.async :refer [chan go >! <!]])\n(let [c (chan 10)]\n  (go (>! c :hello))\n  (go (println (<! c))))",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# F# (functional .NET)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "fsharp", "topic": "basics", "keywords": ["f#", "discriminated union", "computation expression", "pipe", "dotnet"],
+     "snippets": [
+         "// F# basics\nlet add x y = x + y\nlet double = (*) 2\nlet square x = x * x\n\n// Pipeline operator\nlet result =\n    [1..10]\n    |> List.filter (fun x -> x % 2 = 0)\n    |> List.map square\n    |> List.sum\n// 220\n\n// Discriminated unions\ntype Shape =\n    | Circle    of radius: float\n    | Rectangle of width: float * height: float\n    | Triangle  of a: float * b: float * c: float\n\nlet area = function\n    | Circle r         -> System.Math.PI * r * r\n    | Rectangle(w, h)  -> w * h\n    | Triangle(a, b, c) ->\n        let s = (a + b + c) / 2.0\n        sqrt (s * (s-a) * (s-b) * (s-c))",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — more patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "dependency_injection", "keywords": ["dependency injection", "IoC", "container", "wire", "python"],
+     "snippets": [
+         "# Simple DI container\nfrom typing import TypeVar, Type, Callable\nT = TypeVar('T')\n\nclass Container:\n    def __init__(self):\n        self._singletons: dict = {}\n        self._factories:  dict = {}\n\n    def singleton(self, cls: Type[T], factory: Callable[[], T] = None):\n        factory = factory or cls\n        self._singletons[cls] = None\n        self._factories[cls] = factory\n        return self\n\n    def get(self, cls: Type[T]) -> T:\n        if cls in self._singletons:\n            if self._singletons[cls] is None:\n                self._singletons[cls] = self._factories[cls]()\n            return self._singletons[cls]\n        return cls()\n\ncontainer = Container()\ncontainer.singleton(DatabasePool)\ncontainer.singleton(UserRepository, lambda: UserRepository(container.get(DatabasePool)))",
+         "# Using dependency-injector library\nfrom dependency_injector import containers, providers\nfrom dependency_injector.wiring import inject, Provide\n\nclass AppContainer(containers.DeclarativeContainer):\n    config   = providers.Configuration()\n    db_pool  = providers.Singleton(DatabasePool, dsn=config.database.dsn)\n    user_repo = providers.Factory(UserRepository, db=db_pool)\n    user_svc  = providers.Factory(UserService, repo=user_repo)\n\n@inject\nasync def get_user(id: int, svc: UserService = Provide[AppContainer.user_svc]):\n    return await svc.get(id)",
+     ]},
+    {"lang": "python", "topic": "caching_patterns", "keywords": ["cache", "ttl", "lru", "redis", "decorator", "python"],
+     "snippets": [
+         "import time\nfrom functools import wraps\nfrom typing import Callable\n\ndef ttl_cache(ttl: float = 300):\n    \"\"\"Cache with time-to-live expiration.\"\"\"\n    def decorator(fn: Callable) -> Callable:\n        _cache: dict = {}\n        @wraps(fn)\n        def wrapper(*args, **kwargs):\n            key = (args, tuple(sorted(kwargs.items())))\n            if key in _cache:\n                result, ts = _cache[key]\n                if time.monotonic() - ts < ttl:\n                    return result\n            result = fn(*args, **kwargs)\n            _cache[key] = (result, time.monotonic())\n            return result\n        wrapper.cache_clear = _cache.clear\n        return wrapper\n    return decorator\n\n@ttl_cache(ttl=60)\ndef get_user_from_db(user_id: int) -> dict: ...",
+     ]},
+    {"lang": "python", "topic": "event_driven", "keywords": ["event", "signal", "blinker", "pubsub", "python"],
+     "snippets": [
+         "from blinker import signal\n\n# Define signals\nuser_created  = signal('user-created')\norder_placed  = signal('order-placed')\n\n# Subscribe\n@user_created.connect\ndef on_user_created(sender, user=None, **kwargs):\n    print(f'Welcome email sent to {user[\"email\"]}')\n    send_welcome_email(user['email'])\n\n@user_created.connect\ndef on_user_created_analytics(sender, user=None, **kwargs):\n    analytics.track('user_signup', user['id'])\n\n# Emit\nuser = create_user({'name': 'Alice', 'email': 'alice@example.com'})\nuser_created.send(None, user=user)",
+     ]},
+    {"lang": "python", "topic": "generators_advanced", "keywords": ["send", "throw", "yield from", "coroutine", "generator", "python"],
+     "snippets": [
+         "# Two-way generator (send protocol)\ndef accumulator():\n    total = 0\n    while True:\n        value = yield total\n        if value is None:\n            break\n        total += value\n\nacc = accumulator()\nnext(acc)          # prime the generator\nacc.send(10)       # total = 10\nacc.send(20)       # total = 30\nacc.send(5)        # total = 35\n\n# yield from — delegate to sub-generator\ndef chain(*iterables):\n    for it in iterables:\n        yield from it\n\nresult = list(chain([1, 2], [3, 4], [5]))  # [1,2,3,4,5]",
+         "# Async generators\nasync def ticker(interval: float, count: int):\n    for i in range(count):\n        await asyncio.sleep(interval)\n        yield i\n\nasync def stream_data(url: str):\n    async with aiohttp.ClientSession() as s:\n        async with s.get(url) as r:\n            async for chunk in r.content.iter_chunked(4096):\n                yield chunk\n\n# Consume\nasync def main():\n    async for tick in ticker(0.1, 10):\n        print(tick)\n    async for chunk in stream_data('https://example.com'):\n        process(chunk)",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DATABASE — graph databases
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "cypher", "topic": "neo4j", "keywords": ["neo4j", "cypher", "graph", "node", "relationship"],
+     "snippets": [
+         "// Cypher — Neo4j query language\n// Create nodes and relationships\nCREATE (alice:Person {name: 'Alice', age: 30})\nCREATE (bob:Person   {name: 'Bob',   age: 25})\nCREATE (alice)-[:KNOWS {since: 2020}]->(bob);\n\n// Match and query\nMATCH (p:Person)-[:WORKS_AT]->(c:Company)\nWHERE c.name = 'TechCorp'\nRETURN p.name, p.age\nORDER BY p.age;\n\n// Find shortest path\nMATCH path = shortestPath(\n  (alice:Person {name: 'Alice'})-[*]-(bob:Person {name: 'Bob'})\n)\nRETURN length(path), [n in nodes(path) | n.name];\n\n// Social network: friends of friends\nMATCH (me:Person {name: 'Alice'})-[:KNOWS*2]->(fof)\nWHERE NOT (me)-[:KNOWS]->(fof) AND fof <> me\nRETURN DISTINCT fof.name;",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — concurrency patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "thread_patterns", "keywords": ["thread pool", "future", "executor", "concurrent", "python"],
+     "snippets": [
+         "from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed\nfrom typing import Iterator\n\ndef parallel_map(fn, items, max_workers=10) -> Iterator:\n    \"\"\"Execute fn on each item in parallel, yield results as they complete.\"\"\"\n    with ThreadPoolExecutor(max_workers=max_workers) as ex:\n        futures = {ex.submit(fn, item): item for item in items}\n        for future in as_completed(futures):\n            item = futures[future]\n            try:\n                yield item, future.result()\n            except Exception as e:\n                yield item, e\n\n# Usage\nurls = ['https://example.com'] * 20\nfor url, result in parallel_map(fetch, urls):\n    print(url, len(result))",
+         "# asyncio TaskGroup (Python 3.11+)\nimport asyncio\n\nasync def main():\n    async with asyncio.TaskGroup() as tg:\n        task1 = tg.create_task(fetch_users())\n        task2 = tg.create_task(fetch_orders())\n        task3 = tg.create_task(fetch_products())\n    # All tasks complete here, any exception propagates\n    users    = task1.result()\n    orders   = task2.result()\n    products = task3.result()\n\n# asyncio.timeout (Python 3.11+)\nasync def with_timeout():\n    async with asyncio.timeout(5.0):\n        await slow_operation()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DEVOPS — more patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "bash", "topic": "monitoring_scripts", "keywords": ["monitoring", "health check", "alert", "log", "bash"],
+     "snippets": [
+         "#!/bin/bash\n# Service health monitor\nSERVICE_URL='http://localhost:8000/health'\nSLACK_WEBHOOK='https://hooks.slack.com/services/...'\nCHECK_INTERVAL=30\n\ncheck_health() {\n    HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 \"$SERVICE_URL\")\n    [[ \"$HTTP_CODE\" == '200' ]]\n}\n\nalert() {\n    curl -s -X POST \"$SLACK_WEBHOOK\" \\\n        -H 'Content-Type: application/json' \\\n        -d \"{\\\"text\\\": \\\"🔴 Service DOWN: $1\\\"}\"\n}\n\nwas_healthy=true\nwhile true; do\n    if check_health; then\n        $was_healthy || { alert 'Service RECOVERED'; was_healthy=true; }\n    else\n        $was_healthy && { alert \"Health check failed at $(date)\"; was_healthy=false; }\n    fi\n    sleep \"$CHECK_INTERVAL\"\ndone",
+         "#!/bin/bash\n# Log rotation and archival\nset -euo pipefail\n\nLOG_DIR='/var/log/myapp'\nARCHIVE_DIR='/archive/logs'\nRETENTION_DAYS=90\n\n# Compress logs older than 1 day\nfind \"$LOG_DIR\" -name '*.log' -mtime +1 -not -name '*.gz' | \\\n    while read -r f; do\n        gzip \"$f\" && echo \"Compressed: $f\"\n    done\n\n# Archive to cold storage\nDATE=$(date +%Y%m)\nTARGET=\"$ARCHIVE_DIR/$DATE\"\nmkdir -p \"$TARGET\"\nfind \"$LOG_DIR\" -name '*.gz' -mtime +7 -exec mv {} \"$TARGET/\" \\;\n\n# Delete old archives\nfind \"$ARCHIVE_DIR\" -type d -mtime +\"$RETENTION_DAYS\" -exec rm -rf {} +\necho \"Log rotation complete: $(date)\"",
+     ]},
+    {"lang": "python", "topic": "config_management", "keywords": ["config", "environment", "12-factor", "settings", "python"],
+     "snippets": [
+         "# 12-factor app config with full validation\nfrom pydantic_settings import BaseSettings\nfrom pydantic import Field, AnyHttpUrl, PostgresDsn, RedisDsn\nfrom typing import Optional\n\nclass Settings(BaseSettings):\n    # Application\n    app_name:    str = 'MyApp'\n    environment: str = Field('development', pattern='^(development|staging|production)$')\n    debug:       bool = False\n    secret_key:  str = Field(..., min_length=32)\n\n    # Database\n    database_url: PostgresDsn\n    db_pool_min:  int = 2\n    db_pool_max:  int = 20\n\n    # Cache\n    redis_url:    RedisDsn = 'redis://localhost:6379'\n    cache_ttl:    int = 300\n\n    # External services\n    smtp_host:    str = 'smtp.example.com'\n    smtp_port:    int = 587\n    sentry_dsn:   Optional[AnyHttpUrl] = None\n\n    class Config:\n        env_file = '.env'\n        env_file_encoding = 'utf-8'\n        case_sensitive = False\n\nsettings = Settings()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# COMPUTER GRAPHICS / SHADER
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "glsl", "topic": "shaders", "keywords": ["glsl", "shader", "fragment", "vertex", "opengl"],
+     "snippets": [
+         "// GLSL Fragment Shader — Mandelbrot set\n#version 300 es\nprecision highp float;\n\nuniform vec2  u_resolution;\nuniform float u_time;\nout vec4 fragColor;\n\nconst int MAX_ITER = 100;\n\nvoid main() {\n    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / min(u_resolution.x, u_resolution.y);\n    uv = uv * 3.0 - vec2(0.5, 0.0);\n\n    vec2 c = uv;\n    vec2 z = vec2(0.0);\n    int iter = 0;\n\n    for (int i = 0; i < MAX_ITER; i++) {\n        z = vec2(z.x*z.x - z.y*z.y + c.x, 2.0*z.x*z.y + c.y);\n        if (dot(z, z) > 4.0) { iter = i; break; }\n    }\n\n    float t = float(iter) / float(MAX_ITER);\n    vec3 col = vec3(t * 0.9, t * t, 1.0 - t);\n    fragColor = vec4(col, 1.0);\n}",
+         "// GLSL Vertex + Fragment: Phong lighting\n// Vertex shader\n#version 300 es\nin vec3 aPosition;\nin vec3 aNormal;\nuniform mat4 uMVP;\nuniform mat3 uNormalMatrix;\nout vec3 vNormal;\nout vec3 vPosition;\n\nvoid main() {\n    vNormal   = normalize(uNormalMatrix * aNormal);\n    vPosition = aPosition;\n    gl_Position = uMVP * vec4(aPosition, 1.0);\n}\n\n// Fragment shader\nuniform vec3 uLightPos;\nuniform vec3 uColor;\nin vec3 vNormal;\nvoid main() {\n    vec3 L    = normalize(uLightPos - vPosition);\n    float diff = max(dot(vNormal, L), 0.0);\n    vec3 col  = uColor * (0.2 + 0.8 * diff);  // ambient + diffuse\n    fragColor = vec4(col, 1.0);\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MOBILE DEVELOPMENT
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "kotlin", "topic": "android", "keywords": ["android", "viewmodel", "room", "compose", "kotlin"],
+     "snippets": [
+         "// Android ViewModel with StateFlow\nclass UserViewModel(private val repo: UserRepository) : ViewModel() {\n    private val _uiState = MutableStateFlow<UiState<List<User>>>(UiState.Loading)\n    val uiState = _uiState.asStateFlow()\n\n    init { loadUsers() }\n\n    fun loadUsers() {\n        viewModelScope.launch {\n            _uiState.value = UiState.Loading\n            try {\n                val users = repo.getUsers()\n                _uiState.value = UiState.Success(users)\n            } catch (e: Exception) {\n                _uiState.value = UiState.Error(e.message ?: \"Unknown error\")\n            }\n        }\n    }\n}\n\nsealed class UiState<out T> {\n    object Loading : UiState<Nothing>()\n    data class Success<T>(val data: T)  : UiState<T>()\n    data class Error(val message: String) : UiState<Nothing>()\n}",
+         "// Jetpack Compose UI\n@Composable\nfun UserListScreen(viewModel: UserViewModel = hiltViewModel()) {\n    val uiState by viewModel.uiState.collectAsState()\n\n    when (uiState) {\n        is UiState.Loading -> CircularProgressIndicator()\n        is UiState.Error   -> Text((uiState as UiState.Error).message, color = MaterialTheme.colorScheme.error)\n        is UiState.Success -> LazyColumn {\n            items((uiState as UiState.Success<List<User>>).data) { user ->\n                UserCard(user = user, onClick = { /* navigate */ })\n            }\n        }\n    }\n}\n\n@Composable\nfun UserCard(user: User, onClick: () -> Unit) {\n    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(8.dp)) {\n        Row(modifier = Modifier.padding(16.dp)) {\n            AsyncImage(model = user.avatarUrl, contentDescription = null, modifier = Modifier.size(48.dp))\n            Column(modifier = Modifier.padding(start = 12.dp)) {\n                Text(user.name, style = MaterialTheme.typography.titleMedium)\n                Text(user.email, style = MaterialTheme.typography.bodySmall)\n            }\n        }\n    }\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — testing patterns
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "e2e_testing", "keywords": ["playwright", "selenium", "e2e", "browser automation", "python"],
+     "snippets": [
+         "# Playwright async\nfrom playwright.async_api import async_playwright\n\nasync def test_login():\n    async with async_playwright() as p:\n        browser = await p.chromium.launch(headless=True)\n        page    = await browser.new_page()\n\n        await page.goto('https://example.com/login')\n        await page.fill('#email',    'alice@example.com')\n        await page.fill('#password', 'secret')\n        await page.click('button[type=submit]')\n\n        await page.wait_for_url('**/dashboard')\n        assert await page.title() == 'Dashboard'\n\n        # Screenshot on failure\n        await page.screenshot(path='dashboard.png')\n        await browser.close()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# MACHINE LEARNING — more
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "ml_pipelines", "keywords": ["pipeline", "cross validation", "grid search", "sklearn", "python"],
+     "snippets": [
+         "from sklearn.pipeline import Pipeline\nfrom sklearn.preprocessing import StandardScaler, PolynomialFeatures\nfrom sklearn.model_selection import GridSearchCV, cross_val_score\nfrom sklearn.svm import SVR\n\n# Pipeline\npipeline = Pipeline([\n    ('poly',   PolynomialFeatures()),\n    ('scaler', StandardScaler()),\n    ('model',  SVR()),\n])\n\n# Grid search\nparam_grid = {\n    'poly__degree':    [1, 2, 3],\n    'model__C':        [0.1, 1, 10],\n    'model__epsilon':  [0.1, 0.2],\n}\ngrid = GridSearchCV(pipeline, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)\ngrid.fit(X_train, y_train)\nprint('Best params:', grid.best_params_)\nprint('Best RMSE:', (-grid.best_score_)**0.5)",
+         "import numpy as np\nfrom sklearn.model_selection import StratifiedKFold\nfrom sklearn.metrics import roc_auc_score\n\n# K-fold cross validation with custom metrics\ndef cross_validate_custom(model, X, y, n_splits=5):\n    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)\n    scores = []\n    for train_idx, val_idx in skf.split(X, y):\n        X_tr, X_val = X[train_idx], X[val_idx]\n        y_tr, y_val = y[train_idx], y[val_idx]\n        model.fit(X_tr, y_tr)\n        proba = model.predict_proba(X_val)[:, 1]\n        scores.append(roc_auc_score(y_val, proba))\n    return np.mean(scores), np.std(scores)",
+     ]},
+    {"lang": "python", "topic": "neural_architectures", "keywords": ["transformer", "attention", "embedding", "architecture", "python"],
+     "snippets": [
+         "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nimport math\n\nclass MultiHeadAttention(nn.Module):\n    def __init__(self, d_model: int, n_heads: int):\n        super().__init__()\n        assert d_model % n_heads == 0\n        self.d_k    = d_model // n_heads\n        self.n_heads = n_heads\n        self.W_q = nn.Linear(d_model, d_model)\n        self.W_k = nn.Linear(d_model, d_model)\n        self.W_v = nn.Linear(d_model, d_model)\n        self.W_o = nn.Linear(d_model, d_model)\n\n    def forward(self, Q, K, V, mask=None):\n        B, T, _ = Q.shape\n        def split(x):\n            return x.view(B, -1, self.n_heads, self.d_k).transpose(1, 2)\n        Q, K, V = split(self.W_q(Q)), split(self.W_k(K)), split(self.W_v(V))\n        scores = Q @ K.transpose(-2, -1) / math.sqrt(self.d_k)\n        if mask is not None: scores = scores.masked_fill(mask == 0, float('-inf'))\n        attn = F.softmax(scores, dim=-1)\n        out  = (attn @ V).transpose(1, 2).contiguous().view(B, T, -1)\n        return self.W_o(out), attn",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# SECURITY — more
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "owasp", "keywords": ["owasp", "injection", "xss", "broken auth", "security"],
+     "snippets": [
+         "# OWASP Top 10 prevention\n\n# 1. SQL Injection — use parameterised queries\n# BAD:  f'SELECT * FROM users WHERE id = {user_input}'\n# GOOD: cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))\n\n# 2. XSS — escape output\nimport html\nsafe_html = html.escape(user_input)\n\n# 3. Broken Authentication — secure session\nimport secrets\nsession_token = secrets.token_urlsafe(32)\n# Set-Cookie: session=<token>; HttpOnly; Secure; SameSite=Strict\n\n# 4. Insecure Direct Object Reference\n# BAD:  /api/user/{id}  (no authorization check)\n# GOOD:\nasync def get_user(id: int, current_user: User):\n    user = await db.get_user(id)\n    if user.id != current_user.id and not current_user.is_admin:\n        raise HTTPException(403)\n    return user\n\n# 5. Security Misconfiguration — always set secure headers\nSECURITY_HEADERS = {\n    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',\n    'X-Content-Type-Options':    'nosniff',\n    'X-Frame-Options':           'DENY',\n    'Content-Security-Policy':   \"default-src 'self'\",\n    'Referrer-Policy':           'strict-origin-when-cross-origin',\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# NETWORKING — more protocols
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "dns_http", "keywords": ["dns", "tcp", "udp", "protocol", "networking", "python"],
+     "snippets": [
+         "import socket\nimport struct\n\n# Build DNS query packet\ndef build_dns_query(domain: str, record_type: int = 1) -> bytes:\n    # Header: ID=1, flags=0x0100 (recursion desired), QDCOUNT=1\n    header = struct.pack('>HHHHHH', 1, 0x0100, 1, 0, 0, 0)\n    # Question: encode domain\n    question = b''\n    for part in domain.split('.'):\n        question += bytes([len(part)]) + part.encode()\n    question += b'\\x00'  # root\n    question += struct.pack('>HH', record_type, 1)  # QTYPE, QCLASS\n    return header + question\n\n# Send UDP DNS query\nsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\nsock.settimeout(3)\nsock.sendto(build_dns_query('example.com'), ('8.8.8.8', 53))\nresponse, _ = sock.recvfrom(512)\nprint(f'DNS response: {len(response)} bytes')",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# DATA ENGINEERING
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "data_engineering", "keywords": ["etl", "pipeline", "airflow", "spark", "data engineering"],
+     "snippets": [
+         "# Apache Airflow DAG\nfrom airflow.decorators import dag, task\nfrom airflow.utils.dates import days_ago\nfrom datetime import timedelta\n\n@dag(\n    schedule_interval='0 2 * * *',  # daily at 02:00\n    start_date=days_ago(1),\n    catchup=False,\n    default_args={'retries': 2, 'retry_delay': timedelta(minutes=5)}\n)\ndef etl_pipeline():\n    @task\n    def extract() -> list:\n        return fetch_source_data()\n\n    @task\n    def transform(data: list) -> list:\n        return [clean_record(r) for r in data]\n\n    @task\n    def load(data: list) -> None:\n        with db.transaction():\n            db.bulk_insert('processed_events', data)\n\n    load(transform(extract()))\n\netl_pipeline()",
+         "# PySpark data processing\nfrom pyspark.sql import SparkSession\nfrom pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\nspark = SparkSession.builder.appName('ETL').getOrCreate()\n\n# Load and transform\ndf = spark.read.parquet('s3://bucket/events/')\n\nresult = (\n    df.filter(F.col('event_type') == 'purchase')\n      .withColumn('revenue', F.col('amount') * F.col('quantity'))\n      .withColumn('date', F.to_date('timestamp'))\n      .groupBy('user_id', 'date')\n      .agg(\n          F.sum('revenue').alias('daily_revenue'),\n          F.count('*').alias('order_count'),\n      )\n      .withColumn('running_total',\n          F.sum('daily_revenue').over(\n              Window.partitionBy('user_id').orderBy('date')\n          ))\n)\n\nresult.write.mode('overwrite').partitionBy('date').parquet('s3://bucket/output/')",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — async database
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "async_db", "keywords": ["asyncpg", "async sqlalchemy", "postgres", "connection pool", "python"],
+     "snippets": [
+         "import asyncpg\n\nasync def create_pool():\n    return await asyncpg.create_pool(\n        dsn='postgresql://user:pass@localhost/mydb',\n        min_size=2,\n        max_size=20,\n        command_timeout=60,\n    )\n\nasync def get_users(pool: asyncpg.Pool) -> list:\n    async with pool.acquire() as conn:\n        return await conn.fetch('SELECT id, name, email FROM users ORDER BY id')\n\nasync def create_user(pool: asyncpg.Pool, name: str, email: str) -> dict:\n    async with pool.acquire() as conn:\n        async with conn.transaction():\n            row = await conn.fetchrow(\n                'INSERT INTO users(name,email) VALUES($1,$2) RETURNING *',\n                name, email\n            )\n            return dict(row)",
+         "from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession\nfrom sqlalchemy.orm import sessionmaker\nfrom sqlalchemy import select\n\nengine = create_async_engine(\n    'postgresql+asyncpg://user:pass@localhost/mydb',\n    pool_size=10, max_overflow=20, echo=False\n)\nAsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)\n\nasync def get_db():\n    async with AsyncSessionLocal() as session:\n        yield session\n\nasync def get_user(session: AsyncSession, user_id: int):\n    stmt   = select(User).where(User.id == user_id)\n    result = await session.execute(stmt)\n    return result.scalar_one_or_none()",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# WASM in practice (JavaScript side)
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "javascript", "topic": "wasm_usage", "keywords": ["wasm", "webassembly", "instantiate", "memory", "javascript"],
+     "snippets": [
+         "// Load and use WebAssembly from JavaScript\nconst wasmModule = await WebAssembly.instantiateStreaming(\n  fetch('math.wasm'),\n  {\n    env: {\n      memory: new WebAssembly.Memory({ initial: 256 }),\n      log: (n) => console.log('WASM log:', n)\n    }\n  }\n);\n\nconst { add, fib, memory } = wasmModule.instance.exports;\nconsole.log(add(3, 4));   // 7\nconsole.log(fib(30));     // 832040\n\n// Read string from WASM memory\nfunction readString(ptr, memory) {\n  const bytes = new Uint8Array(memory.buffer, ptr);\n  let str = '';\n  for (let i = 0; bytes[i] !== 0; i++) str += String.fromCharCode(bytes[i]);\n  return str;\n}",
+     ]},
+]
+
+# ---------------------------------------------------------------------------
+# PYTHON — interview algorithms continued
+# ---------------------------------------------------------------------------
+KNOWLEDGE += [
+    {"lang": "python", "topic": "dp_patterns", "keywords": ["dynamic programming", "memoization", "tabulation", "dp", "python"],
+     "snippets": [
+         "# Edit distance (Levenshtein)\ndef edit_distance(s1: str, s2: str) -> int:\n    m, n = len(s1), len(s2)\n    dp = list(range(n + 1))\n    for i in range(1, m + 1):\n        prev, dp[0] = dp[0], i\n        for j in range(1, n + 1):\n            temp = dp[j]\n            if s1[i-1] == s2[j-1]:\n                dp[j] = prev\n            else:\n                dp[j] = 1 + min(prev, dp[j], dp[j-1])\n            prev = temp\n    return dp[n]\n\n# Longest increasing subsequence O(n log n)\nimport bisect\n\ndef lis(nums: list) -> int:\n    tails = []\n    for n in nums:\n        pos = bisect.bisect_left(tails, n)\n        if pos == len(tails): tails.append(n)\n        else: tails[pos] = n\n    return len(tails)",
+         "# Interval DP — matrix chain multiplication\ndef matrix_chain(dims: list) -> int:\n    n = len(dims) - 1\n    dp = [[0]*n for _ in range(n)]\n    for length in range(2, n+1):\n        for i in range(n - length + 1):\n            j = i + length - 1\n            dp[i][j] = float('inf')\n            for k in range(i, j):\n                cost = dp[i][k] + dp[k+1][j] + dims[i]*dims[k+1]*dims[j+1]\n                dp[i][j] = min(dp[i][j], cost)\n    return dp[0][n-1]\n\n# Word break DP\ndef word_break(s: str, word_dict: list) -> bool:\n    words = set(word_dict)\n    n = len(s)\n    dp = [False] * (n+1)\n    dp[0] = True\n    for i in range(1, n+1):\n        for j in range(i):\n            if dp[j] and s[j:i] in words:\n                dp[i] = True; break\n    return dp[n]",
+     ]},
+]
+
+
 if __name__ == '__main__':
     main()
